@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, Link } from 'react-router-dom';
 import {
   LayoutDashboard,
   PlusCircle,
@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 
 const navItems = [
-  { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/generate', icon: PlusCircle, label: 'Generate Dataset' },
   { to: '/explorer', icon: Database, label: 'Dataset Explorer' },
   { to: '/analytics', icon: BarChart3, label: 'Analytics & Quality' },
@@ -22,24 +22,26 @@ const navItems = [
 export default function Sidebar() {
   return (
     <aside className="fixed inset-y-0 left-0 w-64 bg-[#0a0f1d] border-r border-slate-800/80 text-white flex flex-col z-30 select-none">
-      {/* Brand Header */}
+      {/* Brand Header linking to Public Site */}
       <div className="px-5 py-5 border-b border-slate-800/80">
-        <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-violet-600 via-indigo-500 to-cyan-400 p-0.5 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+        <Link to="/" className="flex items-center gap-3 group" title="Return to Public Website">
+          <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-violet-600 via-indigo-500 to-cyan-400 p-0.5 flex items-center justify-center shadow-lg shadow-indigo-500/20 group-hover:scale-105 transition-transform">
             <div className="h-full w-full bg-[#0a0f1d] rounded-[10px] flex items-center justify-center">
               <Zap className="h-4.5 w-4.5 text-cyan-400 fill-cyan-400/20" />
             </div>
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <h1 className="text-sm font-bold tracking-tight text-white">DiscoSynth</h1>
+              <h1 className="text-sm font-bold tracking-tight text-white group-hover:text-cyan-300 transition-colors">
+                DiscoSynth
+              </h1>
               <span className="px-1.5 py-0.2 rounded-md bg-violet-500/20 text-violet-300 font-mono text-[10px] font-semibold border border-violet-500/30">
                 AI
               </span>
             </div>
             <p className="text-[11px] text-slate-400 font-medium">Synthetic Litigation Engine</p>
           </div>
-        </div>
+        </Link>
       </div>
 
       {/* Navigation */}
@@ -51,7 +53,6 @@ export default function Sidebar() {
           <NavLink
             key={to}
             to={to}
-            end={to === '/'}
             className={({ isActive }) =>
               `group relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all duration-150 ${
                 isActive

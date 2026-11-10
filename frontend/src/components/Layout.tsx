@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { PlusCircle, Search, Server, Sparkles } from 'lucide-react';
+import { PlusCircle, Globe, LogOut } from 'lucide-react';
 import Sidebar from './Sidebar';
 import { getHealth } from '../api/client';
+import { useAuth } from '../context/AuthContext';
 
 export default function Layout() {
   const [backendStatus, setBackendStatus] = useState<'connected' | 'checking' | 'error'>('checking');
+  const { user, signOut } = useAuth();
   const location = useLocation();
 
   useEffect(() => {
@@ -30,13 +32,13 @@ export default function Layout() {
 
   const getPageTitle = () => {
     const p = location.pathname;
-    if (p === '/') return 'Dashboard Overview';
-    if (p.startsWith('/generate')) return 'Dataset Generator Engine';
-    if (p.startsWith('/explorer')) return 'Litigation Records Explorer';
-    if (p.startsWith('/analytics')) return 'Analytics & Quality Metrics';
-    if (p.startsWith('/history')) return 'Generation Audit History';
-    if (p.startsWith('/settings')) return 'System Diagnostics & Disclaimers';
-    return 'DiscoSynth AI';
+    if (p === '/' || p === '/app' || p === '/dashboard') return 'Dashboard Overview';
+    if (p.includes('/generate')) return 'Dataset Generator Engine';
+    if (p.includes('/explorer')) return 'Litigation Records Explorer';
+    if (p.includes('/analytics')) return 'Analytics & Quality Metrics';
+    if (p.includes('/history')) return 'Generation Audit History';
+    if (p.includes('/settings')) return 'System Diagnostics & Disclaimers';
+    return 'DiscoSynth AI Workspace';
   };
 
   return (
@@ -46,6 +48,14 @@ export default function Layout() {
         {/* Figma-Style Top Bar */}
         <header className="h-14 bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-8 flex items-center justify-between shrink-0 z-20">
           <div className="flex items-center gap-3">
+            <Link
+              to="/"
+              className="text-xs font-semibold text-slate-500 hover:text-slate-900 flex items-center gap-1.5 transition-colors pr-2 border-r border-slate-200"
+              title="Return to Public Website"
+            >
+              <Globe className="h-3.5 w-3.5 text-indigo-600" />
+              <span>Public Website</span>
+            </Link>
             <span className="text-xs font-semibold text-slate-400 font-mono tracking-wider uppercase">
               DiscoSynth
             </span>
@@ -82,6 +92,22 @@ export default function Layout() {
               <PlusCircle className="h-3.5 w-3.5 text-violet-400" />
               <span>Generate</span>
             </Link>
+
+            {/* User Profile Badge */}
+            {user && (
+              <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
+                <div className="h-6 w-6 rounded-full bg-gradient-to-tr from-violet-600 to-indigo-600 text-white flex items-center justify-center text-[10px] font-bold">
+                  {user.avatarLetter}
+                </div>
+                <button
+                  onClick={signOut}
+                  className="p-1 text-slate-400 hover:text-rose-600 rounded-md hover:bg-rose-50 transition-colors"
+                  title="Sign Out"
+                >
+                  <LogOut className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
           </div>
         </header>
 
