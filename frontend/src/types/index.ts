@@ -50,6 +50,8 @@ export interface PaginatedResponse<T> {
 }
 
 export interface AnalyticsData {
+  dataset_id?: string;
+  total_records?: number;
   document_type_distribution: Record<string, number>;
   responsive_distribution: Record<string, number>;
   privilege_distribution: Record<string, number>;

@@ -9,11 +9,19 @@ import type {
   HealthStatus,
 } from '../types';
 
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '',
+// Connect to backend URL: default to http://localhost:8000 if not specified
+const BACKEND_URL =
+  import.meta.env.VITE_API_URL ||
+  (typeof window !== 'undefined' && window.location.hostname === 'localhost'
+    ? 'http://localhost:8000'
+    : '');
+
+export const api = axios.create({
+  baseURL: BACKEND_URL,
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 45000,
 });
 
 export async function getHealth(): Promise<HealthStatus> {
@@ -76,6 +84,6 @@ export async function deleteDataset(id: string): Promise<void> {
 }
 
 export function getExportUrl(id: string, format: 'csv' | 'json'): string {
-  const baseURL = import.meta.env.VITE_API_URL || '';
+  const baseURL = BACKEND_URL;
   return `${baseURL}/api/datasets/${id}/export?format=${format}`;
 }

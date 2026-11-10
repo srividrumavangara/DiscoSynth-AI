@@ -1,47 +1,86 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sparkles, Cog, CheckCircle, AlertCircle } from 'lucide-react';
+import {
+  Sparkles,
+  Cog,
+  CheckCircle,
+  AlertCircle,
+  Sliders,
+  Shield,
+  FileCheck2,
+  Database,
+  ArrowRight,
+  Info,
+} from 'lucide-react';
 import { generateDataset } from '../api/client';
 import type { GenerationRequest } from '../types';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 const SCENARIOS = [
-  { value: 'corporate_fraud', label: 'Corporate Fraud' },
-  { value: 'ip_dispute', label: 'Intellectual Property Dispute' },
-  { value: 'employment_litigation', label: 'Employment Litigation' },
-  { value: 'financial_misconduct', label: 'Financial Misconduct' },
-  { value: 'contract_dispute', label: 'Contract Dispute' },
-  { value: 'custom', label: 'Custom Scenario' },
+  {
+    value: 'corporate_fraud',
+    label: 'Corporate Fraud',
+    desc: 'Accounting irregularities, whistleblower memos, wire transfers, and executive concealment.',
+  },
+  {
+    value: 'ip_dispute',
+    label: 'Intellectual Property Dispute',
+    desc: 'Patent infringement, reverse engineering, semiconductor trade secrets, and source code memos.',
+  },
+  {
+    value: 'employment_litigation',
+    label: 'Employment Litigation',
+    desc: 'Discrimination claims, HR investigations, wrongful termination, and retaliatory communications.',
+  },
+  {
+    value: 'financial_misconduct',
+    label: 'Financial Misconduct',
+    desc: 'AML compliance failures, offshore tax structures, KYC violations, and SEC regulatory probes.',
+  },
+  {
+    value: 'contract_dispute',
+    label: 'Contract Dispute',
+    desc: 'Multi-year procurement breach, SLA non-compliance, force majeure, and indemnification claims.',
+  },
+  {
+    value: 'custom',
+    label: 'Custom Litigation Scenario',
+    desc: 'User-specified parameters, custom issue tags, and tailored custodian distributions.',
+  },
 ];
 
 const RECORD_COUNTS = [100, 500, 1000, 5000];
-const COMPLEXITIES = ['basic', 'intermediate', 'advanced'];
+const COMPLEXITIES = [
+  { value: 'basic', label: 'Basic', desc: 'Predictable distributions, minimal cross-role privilege' },
+  { value: 'intermediate', label: 'Intermediate', desc: 'Standard EDRM rates with email family groups' },
+  { value: 'advanced', label: 'Advanced', desc: 'Complex cross-custodian threads & high redaction rates' },
+];
+
 const DOC_TYPES = [
-  { value: 'email', label: 'Email' },
-  { value: 'pdf', label: 'PDF' },
-  { value: 'docx', label: 'DOCX' },
-  { value: 'xlsx', label: 'XLSX' },
-  { value: 'internal_memo', label: 'Internal Memo' },
-  { value: 'financial_report', label: 'Financial Report' },
-  { value: 'contract', label: 'Contract' },
+  { value: 'email', label: 'Email (.eml)' },
+  { value: 'pdf', label: 'PDF Documents' },
+  { value: 'docx', label: 'Word (.docx)' },
+  { value: 'xlsx', label: 'Spreadsheets (.xlsx)' },
+  { value: 'internal_memo', label: 'Internal Memos' },
+  { value: 'financial_report', label: 'Financial Reports' },
+  { value: 'contract', label: 'Executed Contracts' },
 ];
 
 export default function Generate() {
   const navigate = useNavigate();
   const [generating, setGenerating] = useState(false);
-  const [success, setSuccess] = useState<{ id: string; name: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const [form, setForm] = useState<GenerationRequest>({
-    name: '',
+    name: 'Matter ' + Math.floor(1000 + Math.random() * 9000) + ' Discovery Benchmark',
     scenario: 'corporate_fraud',
-    num_records: 100,
+    num_records: 500,
     complexity: 'intermediate',
     document_types: ['email', 'pdf', 'docx', 'xlsx', 'internal_memo', 'financial_report', 'contract'],
     classification_distribution: 'realistic',
-    custom_responsive_pct: 0.5,
-    seed: undefined,
-    generation_method: 'rule-based',
+    custom_responsive_pct: 0.35,
+    seed: 42,
+    generation_method: 'ai-assisted',
   });
 
   const toggleDocType = (dt: string) => {
@@ -66,7 +105,6 @@ export default function Generate() {
 
     setGenerating(true);
     setError(null);
-    setSuccess(null);
 
     try {
       const payload: GenerationRequest = { ...form };
@@ -77,242 +115,299 @@ export default function Generate() {
         delete payload.seed;
       }
       const dataset = await generateDataset(payload);
-      setSuccess({ id: dataset.id, name: dataset.name });
+      navigate(`/explorer/${dataset.id}`);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Generation failed. Please try again.';
       setError(msg);
-    } finally {
       setGenerating(false);
     }
   };
 
+  // Estimations
+  const estimatedResponsive = Math.round(
+    form.num_records *
+      (form.classification_distribution === 'balanced'
+        ? 0.5
+        : form.classification_distribution === 'custom'
+        ? form.custom_responsive_pct || 0.35
+        : 0.38)
+  );
+
+  const estimatedPrivileged = Math.round(form.num_records * 0.18);
+  const estimatedMb = ((form.num_records * 120) / 1024).toFixed(1);
+
   if (generating) {
     return (
-      <div>
-        <h1 className="text-2xl font-bold text-navy-800 mb-6">Generate Dataset</h1>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12">
-          <LoadingSpinner message="Generating synthetic dataset... This may take a moment for large datasets." />
-        </div>
+      <div className="bg-white rounded-2xl shadow-xs border border-slate-200/90 p-16 text-center">
+        <LoadingSpinner message={`Generating ${form.num_records.toLocaleString()} synthetic records with ${form.generation_method} engine...`} />
+        <p className="text-xs text-slate-400 mt-4 max-w-md mx-auto">
+          Calculating conditional probabilities, assigning document family trees, verifying attorney-client
+          privilege logs, and executing quality scoring audits.
+        </p>
       </div>
     );
   }
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-navy-800 mb-6">Generate Dataset</h1>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-xl font-bold text-slate-900 tracking-tight">Synthetic Dataset Generator</h1>
+        <p className="text-xs text-slate-500 mt-1">
+          Configure stochastic litigation scenarios, target distributions, and reproducible random seeds.
+        </p>
+      </div>
 
-      {/* Success notification */}
-      {success && (
-        <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl flex items-center gap-3">
-          <CheckCircle className="h-5 w-5 text-green-600 shrink-0" />
-          <div className="flex-1">
-            <p className="text-sm font-medium text-green-800">
-              Dataset "{success.name}" generated successfully!
-            </p>
-          </div>
-          <button
-            onClick={() => navigate(`/explorer/${success.id}`)}
-            className="px-4 py-1.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700"
-          >
-            View Dataset
-          </button>
-        </div>
-      )}
-
-      {/* Error notification */}
       {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3">
-          <AlertCircle className="h-5 w-5 text-red-600 shrink-0" />
-          <p className="text-sm text-red-700">{error}</p>
+        <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl flex items-center gap-3 text-xs text-rose-700">
+          <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
+          <span>{error}</span>
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Dataset Name */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <label className="block text-sm font-semibold text-gray-700 mb-2">Dataset Name *</label>
-          <input
-            type="text"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            placeholder="e.g., Corporate Fraud Test Set Q4"
-            className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-400 focus:border-transparent text-sm"
-          />
-        </div>
-
-        {/* Scenario + Records + Complexity */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Scenario */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <label className="block text-sm font-semibold text-gray-700 mb-3">Litigation Scenario</label>
-            <select
-              value={form.scenario}
-              onChange={(e) => setForm({ ...form, scenario: e.target.value })}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-400 text-sm"
-            >
-              {SCENARIOS.map((s) => (
-                <option key={s.value} value={s.value}>{s.label}</option>
-              ))}
-            </select>
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left 2 Columns: Configuration Controls */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Dataset Name */}
+          <div className="bg-white rounded-2xl p-6 border border-slate-200/90 shadow-xs space-y-2">
+            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+              Matter / Dataset Title *
+            </label>
+            <input
+              type="text"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent text-slate-800"
+              placeholder="e.g. Apex Corp Securities Litigation Benchmark Set"
+            />
           </div>
 
-          {/* Num Records */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <label className="block text-sm font-semibold text-gray-700 mb-3">Number of Records</label>
-            <div className="grid grid-cols-2 gap-2">
-              {RECORD_COUNTS.map((n) => (
-                <button
-                  key={n}
-                  type="button"
-                  onClick={() => setForm({ ...form, num_records: n })}
-                  className={`px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
-                    form.num_records === n
-                      ? 'bg-navy-800 text-white border-navy-800'
-                      : 'bg-white text-gray-600 border-gray-200 hover:border-navy-300'
+          {/* Scenario Selection Grid */}
+          <div className="bg-white rounded-2xl p-6 border border-slate-200/90 shadow-xs space-y-3">
+            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+              Litigation Scenario Profile
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {SCENARIOS.map((s) => (
+                <div
+                  key={s.value}
+                  onClick={() => setForm({ ...form, scenario: s.value })}
+                  className={`p-4 rounded-xl border text-left cursor-pointer transition-all ${
+                    form.scenario === s.value
+                      ? 'border-violet-600 bg-violet-50/40 ring-1 ring-violet-600'
+                      : 'border-slate-200 hover:border-slate-300 bg-white'
                   }`}
                 >
-                  {n.toLocaleString()}
+                  <p className="text-xs font-bold text-slate-800">{s.label}</p>
+                  <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">{s.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Records & Complexity */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            {/* Number of Records */}
+            <div className="bg-white rounded-2xl p-6 border border-slate-200/90 shadow-xs space-y-3">
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                Target Record Scale
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {RECORD_COUNTS.map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setForm({ ...form, num_records: n })}
+                    className={`py-2.5 px-3 rounded-xl text-xs font-mono font-semibold transition-all border ${
+                      form.num_records === n
+                        ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                        : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    {n.toLocaleString()} records
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Complexity */}
+            <div className="bg-white rounded-2xl p-6 border border-slate-200/90 shadow-xs space-y-3">
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                Scenario Complexity
+              </label>
+              <div className="space-y-2">
+                {COMPLEXITIES.map((c) => (
+                  <label
+                    key={c.value}
+                    className={`flex items-start gap-2.5 p-2.5 rounded-xl border cursor-pointer transition-all ${
+                      form.complexity === c.value
+                        ? 'bg-violet-50/30 border-violet-500'
+                        : 'border-slate-100 hover:bg-slate-50'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="complexity"
+                      checked={form.complexity === c.value}
+                      onChange={() => setForm({ ...form, complexity: c.value })}
+                      className="mt-0.5 accent-violet-600"
+                    />
+                    <div>
+                      <p className="text-xs font-bold text-slate-800">{c.label}</p>
+                      <p className="text-[10px] text-slate-400">{c.desc}</p>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Document Types */}
+          <div className="bg-white rounded-2xl p-6 border border-slate-200/90 shadow-xs space-y-3">
+            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+              Document Formats to Ingest
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {DOC_TYPES.map((dt) => (
+                <button
+                  key={dt.value}
+                  type="button"
+                  onClick={() => toggleDocType(dt.value)}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all ${
+                    form.document_types.includes(dt.value)
+                      ? 'bg-violet-600 text-white border-violet-600 shadow-xs'
+                      : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                  }`}
+                >
+                  {dt.label}
                 </button>
               ))}
             </div>
           </div>
-
-          {/* Complexity */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <label className="block text-sm font-semibold text-gray-700 mb-3">Complexity</label>
-            <div className="space-y-2">
-              {COMPLEXITIES.map((c) => (
-                <label key={c} className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="complexity"
-                    checked={form.complexity === c}
-                    onChange={() => setForm({ ...form, complexity: c })}
-                    className="accent-navy-800"
-                  />
-                  <span className="text-sm text-gray-700 capitalize">{c}</span>
-                </label>
-              ))}
-            </div>
-          </div>
         </div>
 
-        {/* Document Types */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <label className="block text-sm font-semibold text-gray-700 mb-3">Document Types</label>
-          <div className="flex flex-wrap gap-2">
-            {DOC_TYPES.map((dt) => (
-              <button
-                key={dt.value}
-                type="button"
-                onClick={() => toggleDocType(dt.value)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
-                  form.document_types.includes(dt.value)
-                    ? 'bg-accent-500 text-white border-accent-500'
-                    : 'bg-white text-gray-600 border-gray-200 hover:border-accent-300'
-                }`}
-              >
-                {dt.label}
-              </button>
-            ))}
-          </div>
-        </div>
+        {/* Right 1 Column: Figma-Style Live Inspector Preview & Launch */}
+        <div className="space-y-6">
+          <div className="bg-white rounded-2xl p-6 border border-slate-200/90 shadow-xs space-y-4">
+            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+              <Sliders className="h-4 w-4 text-violet-600" />
+              <span>Engine Parameters</span>
+            </h3>
 
-        {/* Classification + Seed + Method */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Classification */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <label className="block text-sm font-semibold text-gray-700 mb-3">Classification Distribution</label>
+            {/* Generation Engine */}
             <div className="space-y-2">
-              {[
-                { value: 'balanced', label: 'Balanced (50/50)' },
-                { value: 'realistic', label: 'Realistic Imbalanced' },
-                { value: 'custom', label: 'Custom Percentages' },
-              ].map((opt) => (
-                <label key={opt.value} className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="classification"
-                    checked={form.classification_distribution === opt.value}
-                    onChange={() => setForm({ ...form, classification_distribution: opt.value })}
-                    className="accent-navy-800"
-                  />
-                  <span className="text-sm text-gray-700">{opt.label}</span>
-                </label>
-              ))}
+              <span className="text-[11px] font-semibold text-slate-600 block">Generation Method</span>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setForm({ ...form, generation_method: 'ai-assisted' })}
+                  className={`p-2.5 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+                    form.generation_method === 'ai-assisted'
+                      ? 'bg-violet-600 text-white border-violet-600 shadow-xs'
+                      : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                  }`}
+                >
+                  <Sparkles className="h-3.5 w-3.5" />
+                  <span>AI-Assisted</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setForm({ ...form, generation_method: 'rule-based' })}
+                  className={`p-2.5 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+                    form.generation_method === 'rule-based'
+                      ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                      : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                  }`}
+                >
+                  <Cog className="h-3.5 w-3.5" />
+                  <span>Rule-Based</span>
+                </button>
+              </div>
             </div>
-            {form.classification_distribution === 'custom' && (
-              <div className="mt-4 space-y-3">
-                <div>
-                  <label className="text-xs text-gray-500">Responsive: {Math.round((form.custom_responsive_pct || 0.5) * 100)}%</label>
+
+            {/* Random Seed */}
+            <div className="space-y-1.5 pt-2 border-t border-slate-100">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-slate-600">Random Seed</span>
+                <span className="text-[10px] text-slate-400 font-mono">Reproducible</span>
+              </div>
+              <input
+                type="number"
+                value={form.seed ?? ''}
+                onChange={(e) => setForm({ ...form, seed: e.target.value ? parseInt(e.target.value) : undefined })}
+                placeholder="e.g. 42"
+                className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-mono text-slate-800"
+              />
+            </div>
+
+            {/* Classification Ratio */}
+            <div className="space-y-2 pt-2 border-t border-slate-100">
+              <span className="text-[11px] font-semibold text-slate-600 block">Classification Split</span>
+              <div className="space-y-1.5">
+                {[
+                  { value: 'realistic', label: 'Realistic Imbalanced (~35% Responsive)' },
+                  { value: 'balanced', label: 'Balanced (50% / 50%)' },
+                  { value: 'custom', label: 'Custom Distribution Slider' },
+                ].map((d) => (
+                  <label key={d.value} className="flex items-center gap-2 cursor-pointer text-xs text-slate-700">
+                    <input
+                      type="radio"
+                      name="classification_distribution"
+                      checked={form.classification_distribution === d.value}
+                      onChange={() => setForm({ ...form, classification_distribution: d.value })}
+                      className="accent-violet-600"
+                    />
+                    <span>{d.label}</span>
+                  </label>
+                ))}
+              </div>
+
+              {form.classification_distribution === 'custom' && (
+                <div className="pt-2">
+                  <div className="flex justify-between text-[11px] text-slate-500 mb-1">
+                    <span>Target Responsive</span>
+                    <span className="font-mono font-bold text-violet-600">
+                      {Math.round((form.custom_responsive_pct || 0.35) * 100)}%
+                    </span>
+                  </div>
                   <input
                     type="range"
-                    min={0}
-                    max={100}
-                    value={Math.round((form.custom_responsive_pct || 0.5) * 100)}
+                    min="5"
+                    max="95"
+                    value={Math.round((form.custom_responsive_pct || 0.35) * 100)}
                     onChange={(e) => setForm({ ...form, custom_responsive_pct: parseInt(e.target.value) / 100 })}
-                    className="w-full accent-accent-500"
+                    className="w-full accent-violet-600"
                   />
                 </div>
-              </div>
-            )}
-          </div>
-
-          {/* Seed */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Random Seed (optional)</label>
-            <input
-              type="number"
-              value={form.seed ?? ''}
-              onChange={(e) => setForm({ ...form, seed: e.target.value ? parseInt(e.target.value) : undefined })}
-              placeholder="e.g., 42"
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-400 text-sm"
-            />
-            <p className="text-xs text-gray-400 mt-2">Same seed + config = same dataset</p>
-          </div>
-
-          {/* Method */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <label className="block text-sm font-semibold text-gray-700 mb-3">Generation Method</label>
-            <div className="space-y-2">
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="radio"
-                  name="method"
-                  checked={form.generation_method === 'ai-assisted'}
-                  onChange={() => setForm({ ...form, generation_method: 'ai-assisted' })}
-                  className="accent-navy-800"
-                />
-                <div className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-accent-500" />
-                  <span className="text-sm text-gray-700">AI-Assisted</span>
-                </div>
-              </label>
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="radio"
-                  name="method"
-                  checked={form.generation_method === 'rule-based'}
-                  onChange={() => setForm({ ...form, generation_method: 'rule-based' })}
-                  className="accent-navy-800"
-                />
-                <div className="flex items-center gap-2">
-                  <Cog className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm text-gray-700">Rule-Based</span>
-                </div>
-              </label>
+              )}
             </div>
+
+            {/* Live Estimation Box */}
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-2 text-xs">
+              <div className="flex items-center justify-between text-slate-500">
+                <span>Est. Responsive Records:</span>
+                <span className="font-mono font-bold text-slate-800">{estimatedResponsive}</span>
+              </div>
+              <div className="flex items-center justify-between text-slate-500">
+                <span>Est. Privileged Withheld:</span>
+                <span className="font-mono font-bold text-slate-800">{estimatedPrivileged}</span>
+              </div>
+              <div className="flex items-center justify-between text-slate-500">
+                <span>Est. Aggregate Size:</span>
+                <span className="font-mono font-bold text-slate-800">~{estimatedMb} MB</span>
+              </div>
+            </div>
+
+            {/* Launch Button */}
+            <button
+              type="submit"
+              className="w-full py-3.5 bg-gradient-to-r from-violet-600 via-indigo-600 to-violet-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-violet-600/25 transition-all"
+            >
+              <Sparkles className="h-4 w-4" />
+              <span>Generate Synthetic Dataset</span>
+              <ArrowRight className="h-4 w-4 ml-1" />
+            </button>
           </div>
         </div>
-
-        {/* Submit */}
-        <button
-          type="submit"
-          className="w-full py-3.5 bg-navy-800 text-white rounded-xl font-semibold text-base hover:bg-navy-700 transition-colors flex items-center justify-center gap-2"
-        >
-          <Sparkles className="h-5 w-5" />
-          Generate Dataset
-        </button>
       </form>
     </div>
   );
