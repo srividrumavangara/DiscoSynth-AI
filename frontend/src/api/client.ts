@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { supabase } from '../lib/supabase';
 import type {
   Dataset,
   DocumentMetadata,
@@ -22,6 +23,29 @@ export const api = axios.create({
     'Content-Type': 'application/json',
   },
   timeout: 45000,
+});
+
+// Interceptor to inject verified Supabase JWT Bearer token on every request
+api.interceptors.request.use(async (config) => {
+  try {
+    // 1. Try to get real Supabase session token
+    if (supabase) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.access_token) {
+        config.headers.Authorization = `Bearer ${session.access_token}`;
+        return config;
+      }
+    }
+
+    // 2. Fallback to stored token (e.g. isolated demo or restored session)
+    const storedToken = localStorage.getItem('discosynth_auth_token');
+    if (storedToken) {
+      config.headers.Authorization = `Bearer ${storedToken}`;
+    }
+  } catch (err) {
+    console.debug('Failed to attach auth token:', err);
+  }
+  return config;
 });
 
 export async function getHealth(): Promise<HealthStatus> {
@@ -84,6 +108,7 @@ export async function deleteDataset(id: string): Promise<void> {
 }
 
 export function getExportUrl(id: string, format: 'csv' | 'json'): string {
-  const baseURL = BACKEND_URL;
-  return `${baseURL}/api/datasets/${id}/export?format=${format}`;
+  const token = localStorage.getItem('discosynth_auth_token') || '';
+  const tokenParam = token ? `&token=${encodeURIComponent(token)}` : '';
+  return `${BACKEND_URL}/api/datasets/${id}/export?format=${format}${tokenParam}`;
 }

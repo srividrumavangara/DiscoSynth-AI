@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 
 // Public Layout & Pages
 import PublicLayout from './components/public/PublicLayout';
@@ -26,6 +26,30 @@ import Analytics from './pages/Analytics';
 import History from './pages/History';
 import Settings from './pages/Settings';
 
+/**
+ * Route guard enforcing authentication on protected workspace paths.
+ */
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#080808] text-[#F5F5F5] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-6 h-6 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+          <span className="text-xs text-[#737373] font-mono">Authenticating session...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <>{children}</>;
+}
+
 export default function App() {
   return (
     <AuthProvider>
@@ -47,8 +71,15 @@ export default function App() {
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/auth/callback" element={<AuthCallbackPage />} />
 
-        {/* Application Workspace Routes */}
-        <Route path="/app" element={<Layout />}>
+        {/* Protected Application Workspace Routes */}
+        <Route
+          path="/app"
+          element={
+            <ProtectedRoute>
+              <Layout />
+            </ProtectedRoute>
+          }
+        >
           <Route index element={<Navigate to="/app/dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="generate" element={<Generate />} />
@@ -62,8 +93,14 @@ export default function App() {
           <Route path="settings" element={<Settings />} />
         </Route>
 
-        {/* Backward-Compatible Shortcuts & Direct Navigation */}
-        <Route element={<Layout />}>
+        {/* Backward-Compatible Shortcuts (Protected) */}
+        <Route
+          element={
+            <ProtectedRoute>
+              <Layout />
+            </ProtectedRoute>
+          }
+        >
           <Route path="/dashboard" element={<Navigate to="/app/dashboard" replace />} />
           <Route path="/generate" element={<Navigate to="/app/generate" replace />} />
           <Route path="/explorer" element={<Navigate to="/app/datasets" replace />} />

@@ -31,12 +31,44 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
+class Profile(Base):
+    """User profile referencing Supabase auth.users."""
+
+    __tablename__ = "profiles"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    email: Mapped[str] = mapped_column(String(255), nullable=False, unique=True, index=True)
+    display_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    avatar_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
+
+    datasets: Mapped[list["Dataset"]] = relationship(
+        "Dataset",
+        back_populates="owner",
+        cascade="all, delete-orphan",
+        lazy="dynamic",
+    )
+    generation_history: Mapped[list["GenerationHistory"]] = relationship(
+        "GenerationHistory",
+        back_populates="owner",
+        cascade="all, delete-orphan",
+        lazy="dynamic",
+    )
+
+    def __repr__(self) -> str:
+        return f"<Profile id={self.id!r} email={self.email!r}>"
+
+
 class Dataset(Base):
-    """Represents a generated synthetic dataset."""
+    """Represents a generated synthetic litigation dataset."""
 
     __tablename__ = "datasets"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    user_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("profiles.id", ondelete="CASCADE"), nullable=True, index=True
+    )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     scenario: Mapped[str] = mapped_column(String(64), nullable=False)
     num_records: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -49,15 +81,27 @@ class Dataset(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
+    owner: Mapped["Profile | None"] = relationship("Profile", back_populates="datasets")
     records: Mapped[list["DocumentMetadata"]] = relationship(
         "DocumentMetadata",
         back_populates="dataset",
         cascade="all, delete-orphan",
         lazy="dynamic",
     )
+    history: Mapped[list["GenerationHistory"]] = relationship(
+        "GenerationHistory",
+        back_populates="dataset",
+        cascade="all, delete-orphan",
+        lazy="dynamic",
+    )
+
+    @property
+    def record_count(self) -> int:
+        """Alias for num_records for schema consistency."""
+        return self.num_records
 
     def __repr__(self) -> str:
-        return f"<Dataset id={self.id!r} name={self.name!r} status={self.status!r}>"
+        return f"<Dataset id={self.id!r} name={self.name!r} user_id={self.user_id!r}>"
 
 
 class DocumentMetadata(Base):
@@ -104,3 +148,26 @@ class DocumentMetadata(Base):
 
     def __repr__(self) -> str:
         return f"<DocumentMetadata id={self.id} document_id={self.document_id!r}>"
+
+
+class GenerationHistory(Base):
+    """Audit log of synthetic scenario generation runs."""
+
+    __tablename__ = "generation_history"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    user_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("profiles.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    dataset_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("datasets.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    generation_status: Mapped[str] = mapped_column(String(32), nullable=False, default="completed")
+    generation_config: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+    owner: Mapped["Profile | None"] = relationship("Profile", back_populates="generation_history")
+    dataset: Mapped["Dataset | None"] = relationship("Dataset", back_populates="history")
+
+    def __repr__(self) -> str:
+        return f"<GenerationHistory id={self.id!r} status={self.generation_status!r}>"

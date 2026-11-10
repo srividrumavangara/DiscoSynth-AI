@@ -68,6 +68,19 @@ class GenerationRequest(BaseModel):
 # Response schemas
 # ---------------------------------------------------------------------------
 
+class ProfileResponse(BaseModel):
+    """User profile response."""
+
+    id: str
+    email: str
+    display_name: str | None = None
+    avatar_url: str | None = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
 class DocumentMetadataResponse(BaseModel):
     """Single document metadata record returned by the API."""
 
@@ -104,6 +117,7 @@ class DatasetResponse(BaseModel):
     """Detailed view of a dataset."""
 
     id: str
+    user_id: str | None = None
     name: str
     scenario: str
     num_records: int
@@ -123,6 +137,7 @@ class DatasetListResponse(BaseModel):
     """Lightweight dataset listing."""
 
     id: str
+    user_id: str | None = None
     name: str
     scenario: str
     num_records: int
@@ -130,6 +145,19 @@ class DatasetListResponse(BaseModel):
     generation_method: str
     status: str
     quality_score: float | None = None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class GenerationHistoryResponse(BaseModel):
+    """Log of a generation run."""
+
+    id: str
+    user_id: str | None = None
+    dataset_id: str | None = None
+    generation_status: str
+    generation_config: dict[str, Any] | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}

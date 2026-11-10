@@ -8,8 +8,9 @@ import traceback
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.auth import AuthenticatedUser, get_current_user
 from app.database import get_db
-from app.models import Dataset, DocumentMetadata
+from app.models import Dataset, DocumentMetadata, GenerationHistory
 from app.schemas import DatasetResponse, GenerationRequest
 from app.services.generator import SyntheticDataGenerator
 from app.services.llm_service import get_llm_provider
@@ -21,15 +22,20 @@ router = APIRouter(tags=["generate"])
 
 
 @router.post("/generate", response_model=DatasetResponse, status_code=201)
-def generate_dataset(request: GenerationRequest, db: Session = Depends(get_db)):
-    """Generate a new synthetic litigation metadata dataset.
+def generate_dataset(
+    request: GenerationRequest,
+    db: Session = Depends(get_db),
+    current_user: AuthenticatedUser = Depends(get_current_user),
+):
+    """Generate a new synthetic litigation metadata dataset scoped to current authenticated user.
 
     This endpoint:
-    1. Creates a Dataset record in pending state.
-    2. Obtains a scenario profile (via LLM or rule-based fallback).
-    3. Generates synthetic records using the hybrid engine.
-    4. Validates the dataset and computes a quality score.
-    5. Persists all records and updates the dataset status.
+    1. Derives user_id from verified JWT (never from client request body).
+    2. Creates a Dataset record owned by current_user.
+    3. Obtains a scenario profile (via LLM or rule-based fallback).
+    4. Generates synthetic records using the hybrid engine.
+    5. Validates the dataset and computes a quality score.
+    6. Persists records and records generation audit history.
     """
     # Validate num_records
     allowed_sizes = {100, 500, 1000, 5000}
@@ -39,8 +45,9 @@ def generate_dataset(request: GenerationRequest, db: Session = Depends(get_db)):
             detail=f"num_records must be one of {sorted(allowed_sizes)}",
         )
 
-    # Create dataset record
+    # Create dataset record with verified user ownership
     dataset = Dataset(
+        user_id=current_user.id,
         name=request.name,
         scenario=request.scenario.value,
         num_records=request.num_records,
@@ -93,16 +100,27 @@ def generate_dataset(request: GenerationRequest, db: Session = Depends(get_db)):
             db.bulk_save_objects(db_records)
             db.flush()
 
-        # Update dataset
+        # Update dataset status and quality score
         dataset.status = "completed"
         dataset.quality_score = round(quality_report.quality_score * 100, 1)
         dataset.seed = generator.seed
+
+        # Record generation history entry
+        history_entry = GenerationHistory(
+            user_id=current_user.id,
+            dataset_id=dataset.id,
+            generation_status="completed",
+            generation_config=request.model_dump(mode="json"),
+        )
+        db.add(history_entry)
+
         db.commit()
         db.refresh(dataset)
 
         logger.info(
-            "Dataset '%s' generated: %d records, quality=%.1f%%",
+            "Dataset '%s' (owner=%s) generated: %d records, quality=%.1f%%",
             dataset.name,
+            current_user.id,
             len(raw_records),
             dataset.quality_score,
         )
@@ -111,7 +129,19 @@ def generate_dataset(request: GenerationRequest, db: Session = Depends(get_db)):
         logger.error("Generation failed for dataset %s: %s", dataset.id, exc)
         logger.debug(traceback.format_exc())
         dataset.status = "failed"
-        db.commit()
+        # Record failed history
+        try:
+            failed_entry = GenerationHistory(
+                user_id=current_user.id,
+                dataset_id=dataset.id,
+                generation_status="failed",
+                generation_config=request.model_dump(mode="json"),
+            )
+            db.add(failed_entry)
+            db.commit()
+        except Exception:
+            db.rollback()
+
         raise HTTPException(status_code=500, detail=f"Generation failed: {str(exc)}")
 
     return dataset

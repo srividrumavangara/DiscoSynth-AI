@@ -13,6 +13,7 @@ from sqlalchemy.pool import StaticPool
 os.environ["DATABASE_URL"] = "sqlite:///:memory:"
 os.environ["LLM_PROVIDER"] = "mock"
 os.environ["CORS_ORIGINS"] = "*"
+os.environ["ALLOW_MOCK_AUTH"] = "true"
 
 from app.database import Base, get_db
 from app.main import app
@@ -43,7 +44,25 @@ def db_session(engine):
 
 @pytest.fixture
 def client(engine):
-    """Create a FastAPI test client backed by the shared test database."""
+    """Create a FastAPI test client authenticated as a default test user."""
+    TestSession = sessionmaker(bind=engine, autocommit=False, autoflush=False)
+
+    def override_get_db():
+        session = TestSession()
+        try:
+            yield session
+        finally:
+            session.close()
+
+    app.dependency_overrides[get_db] = override_get_db
+    with TestClient(app, headers={"Authorization": "Bearer mock-user-primary"}) as c:
+        yield c
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def unauth_client(engine):
+    """Create an unauthenticated FastAPI test client."""
     TestSession = sessionmaker(bind=engine, autocommit=False, autoflush=False)
 
     def override_get_db():
@@ -55,6 +74,42 @@ def client(engine):
 
     app.dependency_overrides[get_db] = override_get_db
     with TestClient(app) as c:
+        yield c
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def client_user_a(engine):
+    """Client authenticated as User A (Alice)."""
+    TestSession = sessionmaker(bind=engine, autocommit=False, autoflush=False)
+
+    def override_get_db():
+        session = TestSession()
+        try:
+            yield session
+        finally:
+            session.close()
+
+    app.dependency_overrides[get_db] = override_get_db
+    with TestClient(app, headers={"Authorization": "Bearer mock-user-alice"}) as c:
+        yield c
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def client_user_b(engine):
+    """Client authenticated as User B (Bob)."""
+    TestSession = sessionmaker(bind=engine, autocommit=False, autoflush=False)
+
+    def override_get_db():
+        session = TestSession()
+        try:
+            yield session
+        finally:
+            session.close()
+
+    app.dependency_overrides[get_db] = override_get_db
+    with TestClient(app, headers={"Authorization": "Bearer mock-user-bob"}) as c:
         yield c
     app.dependency_overrides.clear()
 

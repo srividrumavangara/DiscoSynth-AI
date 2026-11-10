@@ -4,23 +4,28 @@ import { ArrowRight, Check } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 export default function SignupPage() {
-  const { signUp, demoLogin } = useAuth();
+  const { signUp, demoLogin, isSupabaseLive } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [organization, setOrganization] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [verificationSent, setVerificationSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !name) return;
+    if (!email || !name || !password) return;
     setLoading(true);
     setError(null);
     try {
-      await signUp(email, name, organization || 'Litigation Systems Inc.');
-      navigate('/app/dashboard');
+      const res = await signUp(email, password, name, organization || 'Litigation Systems Inc.');
+      if (res?.needsEmailVerification) {
+        setVerificationSent(true);
+      } else {
+        navigate('/app/dashboard');
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed. Please check your details.');
     } finally {
@@ -58,100 +63,133 @@ export default function SignupPage() {
         {/* Demo Fast Track */}
         <div className="p-3 bg-[#161616] rounded-lg border border-[#2B2B2B] space-y-2">
           <div className="flex items-center justify-between text-[11px] text-[#A3A3A3]">
-            <span className="font-medium text-[#F5F5F5]">Instant Portfolio Testing</span>
-            <span className="font-mono text-[10px] text-[#737373]">Skip registration</span>
+            <span className="font-medium text-[#F5F5F5]">Isolated Demo Evaluation</span>
+            <span className="font-mono text-[10px] text-[#737373]">No password</span>
           </div>
+          <p className="text-[11px] text-[#737373] leading-relaxed">
+            Instantly explore synthetic generation and quality checks in an isolated session.
+          </p>
           <button
             type="button"
             onClick={handleDemoSignIn}
-            className="w-full py-2 px-3 rounded bg-[#222222] hover:bg-[#2B2B2B] text-xs font-semibold text-[#F5F5F5] border border-[#333333] transition-colors flex items-center justify-between"
+            className="w-full py-2 bg-[#202020] hover:bg-[#282828] text-[#F5F5F5] rounded-md text-xs font-semibold border border-[#383838] transition-colors flex items-center justify-center gap-1.5"
           >
-            <span>Continue as Lead Counsel</span>
-            <ArrowRight className="h-3 w-3 text-[#A3A3A3]" />
+            <span>Launch Demo Mode</span>
+            <ArrowRight className="h-3.5 w-3.5" />
           </button>
         </div>
 
-        <div className="relative flex py-1 items-center justify-center">
-          <div className="grow border-t border-[#222222]" />
-          <span className="shrink mx-3 text-[10px] font-mono text-[#555555] uppercase tracking-wider">
-            Or register account
+        <div className="relative flex items-center justify-center">
+          <div className="border-t border-[#262626] w-full" />
+          <span className="bg-[#111111] px-3 text-[11px] font-mono text-[#737373] uppercase tracking-wider">
+            {isSupabaseLive ? 'Or Real Account' : 'Credentials'}
           </span>
-          <div className="grow border-t border-[#222222]" />
+          <div className="border-t border-[#262626] w-full" />
         </div>
 
-        {error && (
-          <div className="p-2.5 bg-[#1F1414] border border-[#402020] rounded text-[11px] text-[#FF8080]">
-            {error}
+        {verificationSent ? (
+          <div className="space-y-4">
+            <div className="p-4 bg-emerald-950/40 border border-emerald-800/60 rounded-lg text-xs text-emerald-300 space-y-2">
+              <div className="flex items-center gap-1.5 font-semibold">
+                <Check className="h-4 w-4" />
+                <span>Verification Email Dispatched</span>
+              </div>
+              <p className="text-[11px] text-emerald-400/90 leading-relaxed">
+                We sent a confirmation link to <span className="font-mono text-white">{email}</span>. Click the link in your email to activate your account, then sign in.
+              </p>
+            </div>
+            <Link
+              to="/login"
+              className="block w-full py-2.5 bg-white text-[#080808] text-center text-xs font-semibold rounded-lg hover:bg-[#E5E5E5] transition-all"
+            >
+              Go to Sign In &rarr;
+            </Link>
           </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <div className="p-3 bg-red-950/40 border border-red-800/60 rounded-lg text-xs text-red-300">
+                {error}
+              </div>
+            )}
+
+            <div>
+              <label className="block text-[11px] font-medium text-[#A3A3A3] mb-1 uppercase tracking-wider">
+                Full Name
+              </label>
+              <input
+                type="text"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. Elena Rostova"
+                className="w-full bg-[#191919] border border-[#303030] rounded-lg px-3 py-2 text-xs text-[#F5F5F5] placeholder-[#555] focus:outline-none focus:border-[#737373] transition-colors"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-medium text-[#A3A3A3] mb-1 uppercase tracking-wider">
+                Institutional Email
+              </label>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="name@organization.com"
+                className="w-full bg-[#191919] border border-[#303030] rounded-lg px-3 py-2 text-xs text-[#F5F5F5] placeholder-[#555] focus:outline-none focus:border-[#737373] transition-colors"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-medium text-[#A3A3A3] mb-1 uppercase tracking-wider">
+                Organization / Practice (Optional)
+              </label>
+              <input
+                type="text"
+                value={organization}
+                onChange={(e) => setOrganization(e.target.value)}
+                placeholder="e.g. Apex Litigation Group"
+                className="w-full bg-[#191919] border border-[#303030] rounded-lg px-3 py-2 text-xs text-[#F5F5F5] placeholder-[#555] focus:outline-none focus:border-[#737373] transition-colors"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-medium text-[#A3A3A3] mb-1 uppercase tracking-wider">
+                Password
+              </label>
+              <input
+                type="password"
+                required
+                minLength={6}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="At least 6 characters"
+                className="w-full bg-[#191919] border border-[#303030] rounded-lg px-3 py-2 text-xs text-[#F5F5F5] placeholder-[#555] focus:outline-none focus:border-[#737373] transition-colors"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-2.5 bg-white text-[#080808] text-xs font-semibold rounded-lg hover:bg-[#E5E5E5] transition-all disabled:opacity-50"
+            >
+              {loading ? 'Creating Account...' : 'Register Account'}
+            </button>
+          </form>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-3 text-xs">
-          <div className="space-y-1">
-            <label className="block text-[#A3A3A3] font-medium">Full Name</label>
-            <input
-              type="text"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Jonathan Vance"
-              className="w-full px-3 py-2 rounded bg-[#0A0A0A] border border-[#303030] text-[#F5F5F5] placeholder-[#555555] focus:outline-none focus:border-[#737373] text-xs"
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="block text-[#A3A3A3] font-medium">Firm / Organization</label>
-            <input
-              type="text"
-              value={organization}
-              onChange={(e) => setOrganization(e.target.value)}
-              placeholder="Apex Litigation Partners"
-              className="w-full px-3 py-2 rounded bg-[#0A0A0A] border border-[#303030] text-[#F5F5F5] placeholder-[#555555] focus:outline-none focus:border-[#737373] text-xs"
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="block text-[#A3A3A3] font-medium">Institutional Email</label>
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="counsel@firm-ediscovery.com"
-              className="w-full px-3 py-2 rounded bg-[#0A0A0A] border border-[#303030] text-[#F5F5F5] placeholder-[#555555] focus:outline-none focus:border-[#737373] text-xs font-mono"
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="block text-[#A3A3A3] font-medium">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••••••"
-              className="w-full px-3 py-2 rounded bg-[#0A0A0A] border border-[#303030] text-[#F5F5F5] placeholder-[#555555] focus:outline-none focus:border-[#737373] text-xs font-mono"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-2.5 rounded bg-[#F5F5F5] hover:bg-white text-[#080808] font-semibold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer mt-3"
-          >
-            {loading ? <span>Creating Account...</span> : <span>Create Account &rarr;</span>}
-          </button>
-        </form>
-
-        <div className="text-center text-xs text-[#737373] pt-2 border-t border-[#1C1C1C]">
-          <span>Already registered? </span>
-          <Link to="/login" className="text-[#F5F5F5] hover:underline font-semibold ml-1">
+        <div className="text-center text-xs text-[#737373]">
+          Already have an account?{' '}
+          <Link to="/login" className="text-[#F5F5F5] hover:underline font-medium">
             Sign In
           </Link>
         </div>
       </div>
 
-      {/* Footer */}
-      <div className="text-center text-[11px] text-[#555555] font-mono">
-        <span>&copy; {new Date().getFullYear()} DiscoSynth AI &middot; Synthetic Litigation Metadata Only</span>
+      {/* Footer Disclaimer */}
+      <div className="text-center text-[11px] text-[#555]">
+        All generated records are strictly synthetic &bull; No genuine client data ingested
       </div>
     </div>
   );

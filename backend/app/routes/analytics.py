@@ -1,12 +1,13 @@
-"""Analytics and quality report endpoints."""
+"""Analytics and quality report endpoints with user ownership enforcement."""
 
 from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.auth import AuthenticatedUser, get_current_user
 from app.database import get_db
 from app.models import Dataset, DocumentMetadata
 from app.schemas import AnalyticsResponse, QualityReport
@@ -18,20 +19,41 @@ router = APIRouter(tags=["analytics"])
 
 
 @router.get("/datasets/{dataset_id}/analytics", response_model=AnalyticsResponse)
-def get_analytics(dataset_id: str, db: Session = Depends(get_db)):
-    """Compute and return analytics for a dataset."""
+def get_analytics(
+    dataset_id: str,
+    db: Session = Depends(get_db),
+    current_user: AuthenticatedUser = Depends(get_current_user),
+):
+    """Compute and return analytics for a dataset owned by current user."""
     dataset = db.query(Dataset).filter(Dataset.id == dataset_id).first()
     if not dataset:
         raise HTTPException(status_code=404, detail="Dataset not found")
+
+    if dataset.user_id is not None and dataset.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: You do not have permission to view analytics for this dataset",
+        )
+
     return compute_analytics(dataset_id, db)
 
 
 @router.get("/datasets/{dataset_id}/quality", response_model=QualityReport)
-def get_quality(dataset_id: str, db: Session = Depends(get_db)):
-    """Compute and return the quality report for a dataset."""
+def get_quality(
+    dataset_id: str,
+    db: Session = Depends(get_db),
+    current_user: AuthenticatedUser = Depends(get_current_user),
+):
+    """Compute and return the quality report for a dataset owned by current user."""
     dataset = db.query(Dataset).filter(Dataset.id == dataset_id).first()
     if not dataset:
         raise HTTPException(status_code=404, detail="Dataset not found")
+
+    if dataset.user_id is not None and dataset.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: You do not have permission to view quality audits for this dataset",
+        )
 
     records = (
         db.query(DocumentMetadata)
@@ -69,5 +91,4 @@ def get_quality(dataset_id: str, db: Session = Depends(get_db)):
         }
         record_dicts.append(d)
 
-    report = validate_dataset(record_dicts, dataset_id=dataset_id)
-    return report
+    return validate_dataset(record_dicts, dataset_id=dataset_id)

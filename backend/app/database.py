@@ -18,20 +18,29 @@ def _get_engine():
     global _engine
     if _engine is None:
         settings = get_settings()
-        url = settings.DATABASE_URL
+        url = settings.normalized_database_url
 
         connect_args: dict = {}
+        engine_kwargs: dict = {
+            "echo": False,
+        }
+
         if url.startswith("sqlite"):
             connect_args["check_same_thread"] = False
+        else:
+            # Production PostgreSQL connection pooling (ideal for Supabase Transaction Pooler)
+            engine_kwargs["pool_pre_ping"] = True
+            engine_kwargs["pool_size"] = 10
+            engine_kwargs["max_overflow"] = 20
+            engine_kwargs["pool_recycle"] = 1800
 
         _engine = create_engine(
             url,
             connect_args=connect_args,
-            pool_pre_ping=True,
-            echo=False,
+            **engine_kwargs,
         )
 
-        # Enable WAL mode for SQLite for better concurrent access.
+        # Enable WAL mode and foreign keys for SQLite.
         if url.startswith("sqlite"):
             @event.listens_for(_engine, "connect")
             def _set_sqlite_pragma(dbapi_conn, _connection_record):

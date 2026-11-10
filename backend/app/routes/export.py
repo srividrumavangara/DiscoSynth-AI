@@ -1,12 +1,13 @@
-"""Export endpoints — CSV and JSON downloads."""
+"""Export endpoints — CSV and JSON downloads with user ownership verification."""
 
 from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
+from app.auth import AuthenticatedUser, get_current_user
 from app.database import get_db
 from app.models import Dataset, DocumentMetadata
 from app.services.export_service import export_csv, export_json
@@ -20,17 +21,21 @@ def export_dataset(
     dataset_id: str,
     format: str = Query("csv", pattern="^(csv|json)$"),
     db: Session = Depends(get_db),
+    current_user: AuthenticatedUser = Depends(get_current_user),
 ):
-    """Export a dataset as CSV or JSON.
+    """Export a dataset as CSV or JSON, verifying user ownership.
 
-    Query Parameters
-    ----------------
-    format : str
-        ``csv`` (default) or ``json``.
+    Supports Authorization header and ?token=<jwt> query parameter for browser downloads.
     """
     dataset = db.query(Dataset).filter(Dataset.id == dataset_id).first()
     if not dataset:
         raise HTTPException(status_code=404, detail="Dataset not found")
+
+    if dataset.user_id is not None and dataset.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: You do not have permission to export this dataset",
+        )
 
     records = (
         db.query(DocumentMetadata)
