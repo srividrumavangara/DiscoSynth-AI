@@ -31,31 +31,32 @@ export default function DataTable<T>({
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+    <div className="bg-[#111111] rounded-xl border border-[#262626] overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-xs text-left">
           <thead>
-            <tr className="border-b border-gray-100 bg-gray-50">
+            <tr className="border-b border-[#262626] bg-[#141414]">
               {columns.map((col) => (
                 <th
                   key={col.key}
-                  className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
+                  className="px-4 py-3 font-mono text-[10px] uppercase tracking-wider text-[#737373]"
                 >
                   {col.header}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-50">
+          <tbody className="divide-y divide-[#1e1e1e]">
             {loading ? (
               <tr>
-                <td colSpan={columns.length} className="px-4 py-12 text-center text-gray-400">
-                  Loading...
+                <td colSpan={columns.length} className="px-4 py-12 text-center text-[#737373]">
+                  <div className="inline-block w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin mb-2" />
+                  <div className="text-xs">Loading records...</div>
                 </td>
               </tr>
             ) : data.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} className="px-4 py-12 text-center text-gray-400">
+                <td colSpan={columns.length} className="px-4 py-12 text-center text-[#737373]">
                   No records found
                 </td>
               </tr>
@@ -64,15 +65,15 @@ export default function DataTable<T>({
                 <tr
                   key={idx}
                   onClick={() => onRowClick?.(row)}
-                  className={`hover:bg-gray-50 transition-colors ${
-                    onRowClick ? 'cursor-pointer' : ''
+                  className={`transition-colors text-[#D4D4D4] ${
+                    onRowClick ? 'cursor-pointer hover:bg-[#191919]' : 'hover:bg-[#141414]'
                   }`}
                 >
                   {columns.map((col) => (
-                    <td key={col.key} className="px-4 py-3 text-gray-700">
+                    <td key={col.key} className="px-4 py-3 whitespace-nowrap">
                       {col.render
                         ? col.render(row)
-                        : String((row as Record<string, unknown>)[col.key] ?? '')}
+                        : String((row as Record<string, unknown>)[col.key] ?? '-')}
                     </td>
                   ))}
                 </tr>
@@ -82,32 +83,32 @@ export default function DataTable<T>({
         </table>
       </div>
 
-      {/* Pagination */}
-      <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-        <p className="text-sm text-gray-500">
-          Showing {Math.min((page - 1) * pageSize + 1, total)}–{Math.min(page * pageSize, total)} of{' '}
-          {total}
-        </p>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => onPageChange(page - 1)}
-            disabled={page <= 1}
-            className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-          <span className="text-sm text-gray-600">
-            Page {page} of {totalPages}
+      {total > 0 && (
+        <div className="px-4 py-3 border-t border-[#262626] flex items-center justify-between bg-[#141414]">
+          <span className="text-[11px] text-[#737373] font-mono">
+            Showing {(page - 1) * pageSize + 1} - {Math.min(page * pageSize, total)} of {total.toLocaleString()} records
           </span>
-          <button
-            onClick={() => onPageChange(page + 1)}
-            disabled={page >= totalPages}
-            className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => onPageChange(page - 1)}
+              disabled={page <= 1}
+              className="p-1.5 rounded border border-[#303030] text-[#A3A3A3] hover:text-white hover:bg-[#202020] disabled:opacity-30 disabled:pointer-events-none transition-colors"
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+            </button>
+            <span className="text-xs font-mono px-2 text-[#F5F5F5]">
+              {page} / {totalPages}
+            </span>
+            <button
+              onClick={() => onPageChange(page + 1)}
+              disabled={page >= totalPages}
+              className="p-1.5 rounded border border-[#303030] text-[#A3A3A3] hover:text-white hover:bg-[#202020] disabled:opacity-30 disabled:pointer-events-none transition-colors"
+            >
+              <ChevronRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

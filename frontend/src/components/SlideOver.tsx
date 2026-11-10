@@ -34,28 +34,28 @@ export default function SlideOver({
     <div className="fixed inset-0 z-50 overflow-hidden">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-slate-950/40 backdrop-blur-xs transition-opacity duration-300 animate-in fade-in"
+        className="fixed inset-0 bg-black/75 backdrop-blur-xs transition-opacity duration-300"
         onClick={onClose}
       />
 
       <div className="fixed inset-y-0 right-0 flex pl-10 max-w-full">
         <div
-          className={`w-screen ${width} bg-white shadow-2xl border-l border-slate-200/80 flex flex-col transform transition-transform duration-300 ease-in-out translate-x-0 animate-in slide-in-from-right`}
+          className={`w-screen ${width} bg-[#0e0e0e] text-[#F5F5F5] shadow-2xl border-l border-[#262626] flex flex-col transform transition-transform duration-300 ease-in-out translate-x-0`}
         >
           {/* Header */}
-          <div className="px-6 py-5 border-b border-slate-100 bg-slate-50/70 flex items-center justify-between">
+          <div className="px-6 py-4 border-b border-[#262626] bg-[#141414] flex items-center justify-between">
             <div>
-              <h2 className="text-base font-semibold text-slate-900 tracking-tight">{title}</h2>
-              {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
+              <h2 className="text-sm font-semibold text-[#F5F5F5] tracking-tight">{title}</h2>
+              {subtitle && <p className="text-[11px] text-[#737373] mt-0.5">{subtitle}</p>}
             </div>
             <div className="flex items-center gap-2">
               {actions}
               <button
                 onClick={onClose}
-                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-lg transition-colors"
+                className="p-1.5 text-[#737373] hover:text-[#F5F5F5] hover:bg-[#202020] rounded-md transition-colors"
                 title="Close (Esc)"
               >
-                <X className="h-5 w-5" />
+                <X className="h-4 w-4" />
               </button>
             </div>
           </div>

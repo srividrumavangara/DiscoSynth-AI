@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { PlusCircle, Globe, LogOut } from 'lucide-react';
+import { Globe, PlusCircle, LogOut } from 'lucide-react';
 import Sidebar from './Sidebar';
 import { getHealth } from '../api/client';
 import { useAuth } from '../context/AuthContext';
@@ -30,79 +30,85 @@ export default function Layout() {
     };
   }, []);
 
-  const getPageTitle = () => {
+  const getBreadcrumb = () => {
     const p = location.pathname;
-    if (p === '/' || p === '/app' || p === '/dashboard') return 'Dashboard Overview';
-    if (p.includes('/generate')) return 'Dataset Generator Engine';
-    if (p.includes('/explorer')) return 'Litigation Records Explorer';
-    if (p.includes('/analytics')) return 'Analytics & Quality Metrics';
-    if (p.includes('/history')) return 'Generation Audit History';
-    if (p.includes('/settings')) return 'System Diagnostics & Disclaimers';
-    return 'DiscoSynth AI Workspace';
+    if (p.includes('/generate')) return 'Generate';
+    if (p.includes('/datasets') || p.includes('/explorer')) return 'Datasets';
+    if (p.includes('/analytics')) return 'Analytics';
+    if (p.includes('/history')) return 'Audit History';
+    if (p.includes('/settings')) return 'Settings';
+    return 'Dashboard';
   };
 
   return (
-    <div className="flex h-screen bg-[#f8fafc] text-slate-800 antialiased font-sans overflow-hidden">
+    <div className="flex h-screen bg-[#080808] text-[#F5F5F5] antialiased font-sans overflow-hidden">
       <Sidebar />
-      <div className="flex-1 ml-64 flex flex-col h-full overflow-hidden">
-        {/* Figma-Style Top Bar */}
-        <header className="h-14 bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-8 flex items-center justify-between shrink-0 z-20">
+      <div className="flex-1 ml-60 flex flex-col h-full overflow-hidden">
+        {/* Top Bar */}
+        <header className="h-14 bg-[#0d0d0d] border-b border-[#262626] px-8 flex items-center justify-between shrink-0 z-20">
           <div className="flex items-center gap-3">
             <Link
               to="/"
-              className="text-xs font-semibold text-slate-500 hover:text-slate-900 flex items-center gap-1.5 transition-colors pr-2 border-r border-slate-200"
+              className="text-xs text-[#737373] hover:text-[#F5F5F5] flex items-center gap-1.5 transition-colors pr-3 border-r border-[#262626]"
               title="Return to Public Website"
             >
-              <Globe className="h-3.5 w-3.5 text-indigo-600" />
-              <span>Public Website</span>
+              <Globe className="h-3.5 w-3.5" />
+              <span>Public</span>
             </Link>
-            <span className="text-xs font-semibold text-slate-400 font-mono tracking-wider uppercase">
-              DiscoSynth
+            <span className="text-xs font-mono text-[#737373]">
+              workspace
             </span>
-            <span className="text-slate-300">/</span>
-            <span className="text-xs font-semibold text-slate-800">{getPageTitle()}</span>
+            <span className="text-[#303030]">/</span>
+            <span className="text-xs font-medium text-[#F5F5F5]">{getBreadcrumb()}</span>
           </div>
 
           <div className="flex items-center gap-4">
-            {/* Live Backend Connection Indicator */}
-            <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-slate-50 border border-slate-200 text-xs">
+            {/* Status indicator */}
+            <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-[#141414] border border-[#262626] text-xs">
               <span
-                className={`h-2 w-2 rounded-full ${
+                className={`h-1.5 w-1.5 rounded-full ${
                   backendStatus === 'connected'
-                    ? 'bg-emerald-500 shadow-xs shadow-emerald-500'
+                    ? 'bg-emerald-400'
                     : backendStatus === 'checking'
-                    ? 'bg-amber-400 animate-ping'
+                    ? 'bg-amber-400 animate-pulse'
                     : 'bg-rose-500'
                 }`}
               />
-              <span className="text-slate-600 font-medium text-[11px] font-mono">
+              <span className="text-[#A3A3A3] text-[11px] font-mono">
                 {backendStatus === 'connected'
-                  ? 'API Connected (Port 8000)'
+                  ? 'API 8000 Connected'
                   : backendStatus === 'checking'
                   ? 'Connecting...'
                   : 'Backend Disconnected'}
               </span>
             </div>
 
-            {/* Quick Action Button */}
             <Link
-              to="/generate"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-medium transition-all shadow-xs"
+              to="/app/generate"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-[#080808] hover:bg-[#E5E5E5] rounded-md text-xs font-semibold transition-all"
             >
-              <PlusCircle className="h-3.5 w-3.5 text-violet-400" />
+              <PlusCircle className="h-3.5 w-3.5" />
               <span>Generate</span>
             </Link>
 
-            {/* User Profile Badge */}
+            {/* User Profile */}
             {user && (
-              <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
-                <div className="h-6 w-6 rounded-full bg-gradient-to-tr from-violet-600 to-indigo-600 text-white flex items-center justify-center text-[10px] font-bold">
+              <div className="flex items-center gap-2 pl-3 border-l border-[#262626]">
+                <div className="h-6 w-6 rounded-full bg-[#262626] text-[#F5F5F5] border border-[#303030] flex items-center justify-center text-[10px] font-mono font-semibold">
                   {user.avatarLetter}
                 </div>
+                <div className="hidden sm:block text-left">
+                  <div className="text-[11px] font-medium text-[#F5F5F5] leading-none">
+                    {user.name}
+                  </div>
+                  <div className="text-[9px] text-[#737373] font-mono leading-none mt-0.5 truncate max-w-[120px]">
+                    {user.email}
+                  </div>
+                </div>
                 <button
-                  onClick={signOut}
-                  className="p-1 text-slate-400 hover:text-rose-600 rounded-md hover:bg-rose-50 transition-colors"
-                  title="Sign Out"
+                  onClick={() => signOut()}
+                  title="Sign out"
+                  className="text-[#737373] hover:text-[#F5F5F5] p-1 transition-colors ml-1"
                 >
                   <LogOut className="h-3.5 w-3.5" />
                 </button>
@@ -111,9 +117,9 @@ export default function Layout() {
           </div>
         </header>
 
-        {/* Scrollable Viewport */}
-        <main className="flex-1 overflow-y-auto">
-          <div className="p-8 max-w-7xl mx-auto space-y-6">{Outlet ? <Outlet /> : null}</div>
+        {/* Main Content Area */}
+        <main className="flex-1 overflow-y-auto bg-[#080808]">
+          <Outlet />
         </main>
       </div>
     </div>

@@ -4,18 +4,17 @@ import {
   BarChart, Bar, PieChart, Pie, Cell, LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
-import { Download, ShieldCheck, ChevronRight, BarChart3, Database } from 'lucide-react';
+import { Download, ShieldCheck, ChevronRight, Database } from 'lucide-react';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
 import { getDatasets, getDatasetAnalytics, getDatasetQuality, getExportUrl } from '../api/client';
 import type { Dataset, AnalyticsData, QualityReport } from '../types';
 
-const MODERN_COLORS = ['#4f46e5', '#06b6d4', '#8b5cf6', '#3b82f6', '#ec4899', '#10b981', '#f59e0b', '#6366f1'];
-
 export default function Analytics() {
-  const { datasetId } = useParams<{ datasetId: string }>();
-  if (!datasetId) return <DatasetPicker />;
-  return <AnalyticsView datasetId={datasetId} />;
+  const { datasetId, id } = useParams<{ datasetId?: string; id?: string }>();
+  const activeId = datasetId || id;
+  if (!activeId) return <DatasetPicker />;
+  return <AnalyticsView datasetId={activeId} />;
 }
 
 function DatasetPicker() {
@@ -32,10 +31,10 @@ function DatasetPicker() {
   if (loading) return <LoadingSpinner message="Querying dataset metrics..." />;
 
   return (
-    <div className="space-y-6">
+    <div className="p-8 space-y-6 max-w-7xl mx-auto">
       <div>
-        <h1 className="text-xl font-bold text-slate-900 tracking-tight">Analytics & Quality Engine</h1>
-        <p className="text-xs text-slate-500 mt-1">
+        <h1 className="text-xl font-bold text-[#F5F5F5] tracking-tight">Analytics & Quality Engine</h1>
+        <p className="text-xs text-[#737373] mt-1">
           Select a dataset to view statistical distributions, timeline trends, and validation audits.
         </p>
       </div>
@@ -46,8 +45,8 @@ function DatasetPicker() {
           description="Generate a synthetic dataset first to compute distributions."
           action={
             <Link
-              to="/generate"
-              className="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-semibold hover:bg-slate-800 transition-colors"
+              to="/app/generate"
+              className="px-4 py-2 bg-white text-[#080808] rounded-lg text-xs font-semibold hover:bg-[#E5E5E5] transition-colors"
             >
               Generate Dataset
             </Link>
@@ -58,26 +57,26 @@ function DatasetPicker() {
           {datasets.map((ds) => (
             <Link
               key={ds.id}
-              to={`/analytics/${ds.id}`}
-              className="bg-white rounded-2xl shadow-xs border border-slate-200/90 p-5 hover:border-violet-500 hover:shadow-md transition-all flex flex-col justify-between group"
+              to={`/app/datasets/${ds.id}/analytics`}
+              className="bg-[#111111] rounded-xl border border-[#262626] p-5 hover:border-[#404040] transition-all flex flex-col justify-between group"
             >
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-mono font-semibold uppercase px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-[10px] font-mono font-medium uppercase px-2 py-0.5 rounded bg-[#191919] text-[#A3A3A3] border border-[#303030]">
                     {ds.scenario.replace(/_/g, ' ')}
                   </span>
-                  <span className="text-[10px] font-mono text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                    {ds.quality_score}% Quality
+                  <span className="text-[10px] font-mono text-[#F5F5F5] bg-[#191919] px-2 py-0.5 rounded border border-[#303030]">
+                    {ds.quality_score ? `${ds.quality_score.toFixed(1)}% Quality` : '—'}
                   </span>
                 </div>
-                <h3 className="font-bold text-slate-800 group-hover:text-violet-600 transition-colors text-sm">
+                <h3 className="font-semibold text-[#F5F5F5] group-hover:text-white transition-colors text-sm">
                   {ds.name}
                 </h3>
               </div>
 
-              <div className="pt-4 border-t border-slate-100 mt-4 flex items-center justify-between text-xs text-slate-500">
+              <div className="pt-4 border-t border-[#1e1e1e] mt-4 flex items-center justify-between text-xs text-[#737373]">
                 <span className="font-mono">{ds.num_records.toLocaleString()} records</span>
-                <span className="font-semibold text-violet-600 flex items-center gap-1">
+                <span className="font-medium text-[#F5F5F5] flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
                   View Analytics <ChevronRight className="h-3.5 w-3.5" />
                 </span>
               </div>
@@ -122,59 +121,55 @@ function AnalyticsView({ datasetId }: { datasetId: string }) {
     { name: 'Responsive', value: analytics.responsive_distribution.responsive || 0 },
     { name: 'Non-Responsive', value: analytics.responsive_distribution.non_responsive || 0 },
   ];
-  const privilegeData = toArr(analytics.privilege_distribution);
-  const confData = toArr(analytics.confidentiality_distribution);
-  const reviewData = toArr(analytics.review_status_distribution);
   const issueData = Object.entries(analytics.issue_tag_frequency)
     .slice(0, 8)
     .map(([name, value]) => ({ name: `#${name}`, value }));
 
   const tooltipStyle = {
-    backgroundColor: '#0f172a',
+    backgroundColor: '#191919',
     borderRadius: '8px',
-    border: 'none',
-    color: '#fff',
+    border: '1px solid #303030',
+    color: '#F5F5F5',
     fontSize: '11px',
-    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
   };
 
   return (
-    <div className="space-y-6">
+    <div className="p-8 space-y-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200/90 shadow-xs">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-[#111111] p-6 rounded-xl border border-[#262626]">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-[11px] font-mono uppercase font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[#191919] text-[#A3A3A3] border border-[#303030]">
               {dataset?.scenario.replace(/_/g, ' ') || 'Litigation'}
             </span>
-            <span className="text-slate-300">•</span>
-            <span className="text-xs text-slate-500 font-mono">
+            <span className="text-[#303030]">&bull;</span>
+            <span className="text-xs text-[#737373] font-mono">
               {analytics.total_records || dataset?.num_records || 0} documents analyzed
             </span>
           </div>
-          <h1 className="text-xl font-bold text-slate-900 tracking-tight">
+          <h1 className="text-xl font-bold text-[#F5F5F5] tracking-tight">
             {dataset?.name || 'Dataset Analytics'}
           </h1>
         </div>
 
         <div className="flex items-center gap-2">
           <Link
-            to={`/explorer/${datasetId}`}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors"
+            to={`/app/datasets/${datasetId}/explorer`}
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-white text-[#080808] hover:bg-[#E5E5E5] rounded-lg text-xs font-semibold transition-all"
           >
-            <Database className="h-3.5 w-3.5 text-violet-400" />
+            <Database className="h-3.5 w-3.5" />
             <span>Open in Explorer</span>
           </Link>
           <a
             href={getExportUrl(datasetId, 'csv')}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-semibold text-slate-700 shadow-xs transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-[#191919] border border-[#303030] hover:bg-[#202020] rounded-lg text-xs font-medium text-[#D4D4D4] transition-colors"
           >
             <Download className="h-3.5 w-3.5" />
             <span>CSV</span>
           </a>
           <a
             href={getExportUrl(datasetId, 'json')}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-semibold text-slate-700 shadow-xs transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-[#191919] border border-[#303030] hover:bg-[#202020] rounded-lg text-xs font-medium text-[#D4D4D4] transition-colors"
           >
             <Download className="h-3.5 w-3.5" />
             <span>JSON</span>
@@ -184,18 +179,18 @@ function AnalyticsView({ datasetId }: { datasetId: string }) {
 
       {/* Quality Score Breakdown Card */}
       {quality && (
-        <div className="bg-white rounded-2xl shadow-xs border border-slate-200/90 p-6">
+        <div className="bg-[#111111] rounded-xl border border-[#262626] p-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <ShieldCheck className="h-5 w-5 text-emerald-600" />
-              <h3 className="text-sm font-bold text-slate-900">Synthetic Data Quality Audit</h3>
+              <ShieldCheck className="h-4 w-4 text-[#F5F5F5]" />
+              <h3 className="text-xs font-mono uppercase tracking-wider text-[#A3A3A3]">Synthetic Data Quality Audit</h3>
             </div>
-            <span className="text-xs font-mono font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+            <span className="text-xs font-mono text-[#F5F5F5] bg-[#191919] px-2.5 py-0.5 rounded border border-[#303030]">
               Composite: {(quality.overall_score * 100).toFixed(1)}%
             </span>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 pt-2">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-1">
             {[
               { label: 'Schema Validity', value: quality.schema_validity, weight: '25%' },
               { label: 'Completeness', value: quality.completeness, weight: '25%' },
@@ -203,17 +198,17 @@ function AnalyticsView({ datasetId }: { datasetId: string }) {
               { label: 'Logical Consistency', value: quality.logical_consistency, weight: '20%' },
               { label: 'Distribution Adherence', value: quality.distribution_adherence, weight: '10%' },
             ].map(({ label, value, weight }) => (
-              <div key={label} className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-                <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1">
+              <div key={label} className="p-3 bg-[#141414] rounded-lg border border-[#222]">
+                <div className="flex items-center justify-between text-[10px] text-[#737373] font-mono mb-1">
                   <span>{weight}</span>
-                  <span className="font-mono font-bold text-slate-700">
+                  <span className="text-[#F5F5F5] font-semibold">
                     {((value ?? 0) * 100).toFixed(0)}%
                   </span>
                 </div>
-                <p className="text-xs font-semibold text-slate-800 truncate mb-2">{label}</p>
-                <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                <p className="text-xs font-medium text-[#D4D4D4] truncate mb-2">{label}</p>
+                <div className="h-1 bg-[#262626] rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-emerald-500 rounded-full"
+                    className="h-full bg-white rounded-full"
                     style={{ width: `${(value ?? 0) * 100}%` }}
                   />
                 </div>
@@ -223,33 +218,33 @@ function AnalyticsView({ datasetId }: { datasetId: string }) {
         </div>
       )}
 
-      {/* Grid of Clean Modern Charts */}
+      {/* Grid of Monochromatic Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Document Type Bar Chart */}
-        <div className="bg-white rounded-2xl shadow-xs border border-slate-200/90 p-5">
-          <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-4">
+        <div className="bg-[#111111] rounded-xl border border-[#262626] p-5">
+          <h3 className="text-xs font-mono uppercase tracking-wider text-[#A3A3A3] mb-4">
             Document Types Distribution
           </h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={docTypeData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} />
-                <YAxis tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
+                <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#737373' }} axisLine={false} />
+                <YAxis tick={{ fontSize: 10, fill: '#737373' }} axisLine={false} />
                 <Tooltip contentStyle={tooltipStyle} />
-                <Bar dataKey="value" fill="#4f46e5" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="value" fill="#E5E5E5" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Responsiveness Clean Donut Chart */}
-        <div className="bg-white rounded-2xl shadow-xs border border-slate-200/90 p-5 flex flex-col justify-between">
+        <div className="bg-[#111111] rounded-xl border border-[#262626] p-5 flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+            <h3 className="text-xs font-mono uppercase tracking-wider text-[#A3A3A3]">
               Responsive Document Ratio
             </h3>
-            <span className="text-xs font-mono font-bold text-indigo-600">
+            <span className="text-xs font-mono font-semibold text-[#F5F5F5]">
               {Math.round(
                 ((analytics.responsive_distribution.responsive || 0) /
                   (analytics.total_records || dataset?.num_records || 1)) *
@@ -263,61 +258,61 @@ function AnalyticsView({ datasetId }: { datasetId: string }) {
               <PieChart>
                 <Tooltip contentStyle={tooltipStyle} />
                 <Pie data={responsiveData} dataKey="value" nameKey="name" innerRadius={60} outerRadius={85} paddingAngle={4}>
-                  <Cell fill="#4f46e5" />
-                  <Cell fill="#cbd5e1" />
+                  <Cell fill="#FFFFFF" />
+                  <Cell fill="#333333" />
                 </Pie>
               </PieChart>
             </ResponsiveContainer>
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-xl font-bold font-mono text-slate-800">
+              <span className="text-xl font-bold font-mono text-[#F5F5F5]">
                 {analytics.responsive_distribution.responsive?.toLocaleString()}
               </span>
-              <span className="text-[10px] text-slate-400 uppercase font-semibold">Docs Responsive</span>
+              <span className="text-[10px] text-[#737373] uppercase font-mono">Docs Responsive</span>
             </div>
           </div>
-          <div className="flex items-center justify-center gap-6 text-xs text-slate-600 pt-2 border-t border-slate-100">
+          <div className="flex items-center justify-center gap-6 text-xs text-[#A3A3A3] pt-3 border-t border-[#1e1e1e]">
             <span className="flex items-center gap-2">
-              <span className="h-2.5 w-2.5 rounded-full bg-indigo-600" />
+              <span className="h-2 w-2 rounded-full bg-white" />
               Responsive: {analytics.responsive_distribution.responsive?.toLocaleString()}
             </span>
             <span className="flex items-center gap-2">
-              <span className="h-2.5 w-2.5 rounded-full bg-slate-300" />
+              <span className="h-2 w-2 rounded-full bg-[#333]" />
               Non-Responsive: {analytics.responsive_distribution.non_responsive?.toLocaleString()}
             </span>
           </div>
         </div>
 
         {/* Creation Timeline */}
-        <div className="bg-white rounded-2xl shadow-xs border border-slate-200/90 p-5">
-          <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-4">
+        <div className="bg-[#111111] rounded-xl border border-[#262626] p-5">
+          <h3 className="text-xs font-mono uppercase tracking-wider text-[#A3A3A3] mb-4">
             Document Generation Timeline
           </h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={analytics.timeline}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} />
-                <YAxis tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
+                <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#737373' }} axisLine={false} />
+                <YAxis tick={{ fontSize: 10, fill: '#737373' }} axisLine={false} />
                 <Tooltip contentStyle={tooltipStyle} />
-                <Line type="monotone" dataKey="count" stroke="#6366f1" strokeWidth={2.5} dot={{ r: 3, fill: '#6366f1' }} />
+                <Line type="monotone" dataKey="count" stroke="#FFFFFF" strokeWidth={1.5} dot={{ r: 2, fill: '#FFFFFF' }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Issue Tag Frequency */}
-        <div className="bg-white rounded-2xl shadow-xs border border-slate-200/90 p-5">
-          <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-4">
+        <div className="bg-[#111111] rounded-xl border border-[#262626] p-5">
+          <h3 className="text-xs font-mono uppercase tracking-wider text-[#A3A3A3] mb-4">
             Top Litigation Issue Tags
           </h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={issueData} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
-                <XAxis type="number" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} />
-                <YAxis dataKey="name" type="category" width={110} tick={{ fontSize: 10, fill: '#475569' }} axisLine={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#222" horizontal={false} />
+                <XAxis type="number" tick={{ fontSize: 10, fill: '#737373' }} axisLine={false} />
+                <YAxis dataKey="name" type="category" width={110} tick={{ fontSize: 10, fill: '#A3A3A3' }} axisLine={false} />
                 <Tooltip contentStyle={tooltipStyle} />
-                <Bar dataKey="value" fill="#06b6d4" radius={[0, 6, 6, 0]} />
+                <Bar dataKey="value" fill="#737373" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

@@ -3,14 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import {
   Sparkles,
   Cog,
-  CheckCircle,
   AlertCircle,
   Sliders,
-  Shield,
-  FileCheck2,
-  Database,
   ArrowRight,
-  Info,
 } from 'lucide-react';
 import { generateDataset } from '../api/client';
 import type { GenerationRequest } from '../types';
@@ -44,8 +39,8 @@ const SCENARIOS = [
   },
   {
     value: 'custom',
-    label: 'Custom Litigation Scenario',
-    desc: 'User-specified parameters, custom issue tags, and tailored custodian distributions.',
+    label: 'Custom Scenario',
+    desc: 'Tailored parameters, custom issue tags, and custodian distribution controls.',
   },
 ];
 
@@ -72,7 +67,7 @@ export default function Generate() {
   const [error, setError] = useState<string | null>(null);
 
   const [form, setForm] = useState<GenerationRequest>({
-    name: 'Matter ' + Math.floor(1000 + Math.random() * 9000) + ' Discovery Benchmark',
+    name: 'Matter ' + Math.floor(1000 + Math.random() * 9000) + ' Benchmark Set',
     scenario: 'corporate_fraud',
     num_records: 500,
     complexity: 'intermediate',
@@ -115,7 +110,7 @@ export default function Generate() {
         delete payload.seed;
       }
       const dataset = await generateDataset(payload);
-      navigate(`/explorer/${dataset.id}`);
+      navigate(`/app/datasets/${dataset.id}/explorer`);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Generation failed. Please try again.';
       setError(msg);
@@ -123,7 +118,6 @@ export default function Generate() {
     }
   };
 
-  // Estimations
   const estimatedResponsive = Math.round(
     form.num_records *
       (form.classification_distribution === 'balanced'
@@ -138,28 +132,30 @@ export default function Generate() {
 
   if (generating) {
     return (
-      <div className="bg-white rounded-2xl shadow-xs border border-slate-200/90 p-16 text-center">
-        <LoadingSpinner message={`Generating ${form.num_records.toLocaleString()} synthetic records with ${form.generation_method} engine...`} />
-        <p className="text-xs text-slate-400 mt-4 max-w-md mx-auto">
-          Calculating conditional probabilities, assigning document family trees, verifying attorney-client
-          privilege logs, and executing quality scoring audits.
-        </p>
+      <div className="p-8 max-w-2xl mx-auto my-12">
+        <div className="bg-[#111111] rounded-xl border border-[#262626] p-12 text-center space-y-4">
+          <LoadingSpinner message={`Generating ${form.num_records.toLocaleString()} synthetic records with ${form.generation_method} engine...`} />
+          <p className="text-xs text-[#737373] max-w-md mx-auto leading-relaxed">
+            Calibrating stochastic family trees, conditionally assigning attorney-client privilege probabilities,
+            and executing automated metadata validation checks.
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="p-8 space-y-6 max-w-7xl mx-auto">
       <div>
-        <h1 className="text-xl font-bold text-slate-900 tracking-tight">Synthetic Dataset Generator</h1>
-        <p className="text-xs text-slate-500 mt-1">
+        <h1 className="text-xl font-bold text-[#F5F5F5] tracking-tight">Synthetic Dataset Generator</h1>
+        <p className="text-xs text-[#737373] mt-1">
           Configure stochastic litigation scenarios, target distributions, and reproducible random seeds.
         </p>
       </div>
 
       {error && (
-        <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl flex items-center gap-3 text-xs text-rose-700">
-          <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
+        <div className="p-4 bg-red-950/40 border border-red-800/60 rounded-xl flex items-center gap-3 text-xs text-red-300">
+          <AlertCircle className="h-4 w-4 shrink-0 text-red-400" />
           <span>{error}</span>
         </div>
       )}
@@ -168,22 +164,22 @@ export default function Generate() {
         {/* Left 2 Columns: Configuration Controls */}
         <div className="lg:col-span-2 space-y-6">
           {/* Dataset Name */}
-          <div className="bg-white rounded-2xl p-6 border border-slate-200/90 shadow-xs space-y-2">
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+          <div className="bg-[#111111] rounded-xl p-6 border border-[#262626] space-y-2">
+            <label className="block text-[11px] font-mono text-[#A3A3A3] uppercase tracking-wider">
               Matter / Dataset Title *
             </label>
             <input
               type="text"
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
-              className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent text-slate-800"
+              className="w-full px-3.5 py-2.5 bg-[#191919] border border-[#303030] rounded-lg text-xs text-[#F5F5F5] placeholder-[#555] focus:outline-none focus:border-[#737373] transition-colors"
               placeholder="e.g. Apex Corp Securities Litigation Benchmark Set"
             />
           </div>
 
           {/* Scenario Selection Grid */}
-          <div className="bg-white rounded-2xl p-6 border border-slate-200/90 shadow-xs space-y-3">
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+          <div className="bg-[#111111] rounded-xl p-6 border border-[#262626] space-y-3">
+            <label className="block text-[11px] font-mono text-[#A3A3A3] uppercase tracking-wider">
               Litigation Scenario Profile
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -193,12 +189,12 @@ export default function Generate() {
                   onClick={() => setForm({ ...form, scenario: s.value })}
                   className={`p-4 rounded-xl border text-left cursor-pointer transition-all ${
                     form.scenario === s.value
-                      ? 'border-violet-600 bg-violet-50/40 ring-1 ring-violet-600'
-                      : 'border-slate-200 hover:border-slate-300 bg-white'
+                      ? 'border-white bg-[#191919] text-[#F5F5F5]'
+                      : 'border-[#262626] hover:border-[#383838] bg-[#141414] text-[#A3A3A3]'
                   }`}
                 >
-                  <p className="text-xs font-bold text-slate-800">{s.label}</p>
-                  <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">{s.desc}</p>
+                  <p className="text-xs font-semibold text-[#F5F5F5]">{s.label}</p>
+                  <p className="text-[11px] text-[#737373] mt-1 leading-relaxed">{s.desc}</p>
                 </div>
               ))}
             </div>
@@ -207,8 +203,8 @@ export default function Generate() {
           {/* Records & Complexity */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {/* Number of Records */}
-            <div className="bg-white rounded-2xl p-6 border border-slate-200/90 shadow-xs space-y-3">
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+            <div className="bg-[#111111] rounded-xl p-6 border border-[#262626] space-y-3">
+              <label className="block text-[11px] font-mono text-[#A3A3A3] uppercase tracking-wider">
                 Target Record Scale
               </label>
               <div className="grid grid-cols-2 gap-2">
@@ -217,10 +213,10 @@ export default function Generate() {
                     key={n}
                     type="button"
                     onClick={() => setForm({ ...form, num_records: n })}
-                    className={`py-2.5 px-3 rounded-xl text-xs font-mono font-semibold transition-all border ${
+                    className={`py-2 px-3 rounded-lg text-xs font-mono font-medium transition-all border ${
                       form.num_records === n
-                        ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
-                        : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'
+                        ? 'bg-white text-[#080808] border-white'
+                        : 'bg-[#191919] text-[#A3A3A3] border-[#303030] hover:border-[#404040]'
                     }`}
                   >
                     {n.toLocaleString()} records
@@ -230,18 +226,18 @@ export default function Generate() {
             </div>
 
             {/* Complexity */}
-            <div className="bg-white rounded-2xl p-6 border border-slate-200/90 shadow-xs space-y-3">
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+            <div className="bg-[#111111] rounded-xl p-6 border border-[#262626] space-y-3">
+              <label className="block text-[11px] font-mono text-[#A3A3A3] uppercase tracking-wider">
                 Scenario Complexity
               </label>
               <div className="space-y-2">
                 {COMPLEXITIES.map((c) => (
                   <label
                     key={c.value}
-                    className={`flex items-start gap-2.5 p-2.5 rounded-xl border cursor-pointer transition-all ${
+                    className={`flex items-start gap-2.5 p-2.5 rounded-lg border cursor-pointer transition-all ${
                       form.complexity === c.value
-                        ? 'bg-violet-50/30 border-violet-500'
-                        : 'border-slate-100 hover:bg-slate-50'
+                        ? 'bg-[#191919] border-white/60'
+                        : 'border-[#262626] hover:bg-[#161616]'
                     }`}
                   >
                     <input
@@ -249,11 +245,11 @@ export default function Generate() {
                       name="complexity"
                       checked={form.complexity === c.value}
                       onChange={() => setForm({ ...form, complexity: c.value })}
-                      className="mt-0.5 accent-violet-600"
+                      className="mt-0.5 accent-white"
                     />
                     <div>
-                      <p className="text-xs font-bold text-slate-800">{c.label}</p>
-                      <p className="text-[10px] text-slate-400">{c.desc}</p>
+                      <p className="text-xs font-medium text-[#F5F5F5]">{c.label}</p>
+                      <p className="text-[10px] text-[#737373]">{c.desc}</p>
                     </div>
                   </label>
                 ))}
@@ -262,8 +258,8 @@ export default function Generate() {
           </div>
 
           {/* Document Types */}
-          <div className="bg-white rounded-2xl p-6 border border-slate-200/90 shadow-xs space-y-3">
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+          <div className="bg-[#111111] rounded-xl p-6 border border-[#262626] space-y-3">
+            <label className="block text-[11px] font-mono text-[#A3A3A3] uppercase tracking-wider">
               Document Formats to Ingest
             </label>
             <div className="flex flex-wrap gap-2">
@@ -272,10 +268,10 @@ export default function Generate() {
                   key={dt.value}
                   type="button"
                   onClick={() => toggleDocType(dt.value)}
-                  className={`px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
                     form.document_types.includes(dt.value)
-                      ? 'bg-violet-600 text-white border-violet-600 shadow-xs'
-                      : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                      ? 'bg-white text-[#080808] border-white'
+                      : 'bg-[#191919] text-[#A3A3A3] border-[#303030] hover:border-[#404040]'
                   }`}
                 >
                   {dt.label}
@@ -285,25 +281,25 @@ export default function Generate() {
           </div>
         </div>
 
-        {/* Right 1 Column: Figma-Style Live Inspector Preview & Launch */}
+        {/* Right 1 Column: Engine Parameters & Launch */}
         <div className="space-y-6">
-          <div className="bg-white rounded-2xl p-6 border border-slate-200/90 shadow-xs space-y-4">
-            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-              <Sliders className="h-4 w-4 text-violet-600" />
+          <div className="bg-[#111111] rounded-xl p-6 border border-[#262626] space-y-5">
+            <h3 className="text-xs font-mono uppercase tracking-wider text-[#A3A3A3] flex items-center gap-1.5">
+              <Sliders className="h-3.5 w-3.5" />
               <span>Engine Parameters</span>
             </h3>
 
             {/* Generation Engine */}
             <div className="space-y-2">
-              <span className="text-[11px] font-semibold text-slate-600 block">Generation Method</span>
+              <span className="text-[11px] font-medium text-[#A3A3A3] block">Generation Method</span>
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={() => setForm({ ...form, generation_method: 'ai-assisted' })}
-                  className={`p-2.5 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+                  className={`p-2.5 rounded-lg border text-xs font-medium flex items-center justify-center gap-1.5 transition-all ${
                     form.generation_method === 'ai-assisted'
-                      ? 'bg-violet-600 text-white border-violet-600 shadow-xs'
-                      : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                      ? 'bg-white text-[#080808] border-white font-semibold'
+                      : 'bg-[#191919] text-[#A3A3A3] border-[#303030] hover:border-[#404040]'
                   }`}
                 >
                   <Sparkles className="h-3.5 w-3.5" />
@@ -312,10 +308,10 @@ export default function Generate() {
                 <button
                   type="button"
                   onClick={() => setForm({ ...form, generation_method: 'rule-based' })}
-                  className={`p-2.5 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+                  className={`p-2.5 rounded-lg border text-xs font-medium flex items-center justify-center gap-1.5 transition-all ${
                     form.generation_method === 'rule-based'
-                      ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
-                      : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                      ? 'bg-white text-[#080808] border-white font-semibold'
+                      : 'bg-[#191919] text-[#A3A3A3] border-[#303030] hover:border-[#404040]'
                   }`}
                 >
                   <Cog className="h-3.5 w-3.5" />
@@ -325,36 +321,36 @@ export default function Generate() {
             </div>
 
             {/* Random Seed */}
-            <div className="space-y-1.5 pt-2 border-t border-slate-100">
+            <div className="space-y-1.5 pt-3 border-t border-[#1e1e1e]">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-slate-600">Random Seed</span>
-                <span className="text-[10px] text-slate-400 font-mono">Reproducible</span>
+                <span className="text-[11px] font-medium text-[#A3A3A3]">Random Seed</span>
+                <span className="text-[10px] text-[#737373] font-mono">Reproducible</span>
               </div>
               <input
                 type="number"
                 value={form.seed ?? ''}
                 onChange={(e) => setForm({ ...form, seed: e.target.value ? parseInt(e.target.value) : undefined })}
                 placeholder="e.g. 42"
-                className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-mono text-slate-800"
+                className="w-full px-3 py-2 bg-[#191919] border border-[#303030] rounded-lg text-xs font-mono text-[#F5F5F5] placeholder-[#555] focus:outline-none focus:border-[#737373]"
               />
             </div>
 
             {/* Classification Ratio */}
-            <div className="space-y-2 pt-2 border-t border-slate-100">
-              <span className="text-[11px] font-semibold text-slate-600 block">Classification Split</span>
-              <div className="space-y-1.5">
+            <div className="space-y-2 pt-3 border-t border-[#1e1e1e]">
+              <span className="text-[11px] font-medium text-[#A3A3A3] block">Classification Split</span>
+              <div className="space-y-2">
                 {[
                   { value: 'realistic', label: 'Realistic Imbalanced (~35% Responsive)' },
                   { value: 'balanced', label: 'Balanced (50% / 50%)' },
                   { value: 'custom', label: 'Custom Distribution Slider' },
                 ].map((d) => (
-                  <label key={d.value} className="flex items-center gap-2 cursor-pointer text-xs text-slate-700">
+                  <label key={d.value} className="flex items-center gap-2 cursor-pointer text-xs text-[#D4D4D4]">
                     <input
                       type="radio"
                       name="classification_distribution"
                       checked={form.classification_distribution === d.value}
                       onChange={() => setForm({ ...form, classification_distribution: d.value })}
-                      className="accent-violet-600"
+                      className="accent-white"
                     />
                     <span>{d.label}</span>
                   </label>
@@ -363,9 +359,9 @@ export default function Generate() {
 
               {form.classification_distribution === 'custom' && (
                 <div className="pt-2">
-                  <div className="flex justify-between text-[11px] text-slate-500 mb-1">
+                  <div className="flex justify-between text-[11px] text-[#737373] mb-1">
                     <span>Target Responsive</span>
-                    <span className="font-mono font-bold text-violet-600">
+                    <span className="font-mono font-bold text-[#F5F5F5]">
                       {Math.round((form.custom_responsive_pct || 0.35) * 100)}%
                     </span>
                   </div>
@@ -375,36 +371,35 @@ export default function Generate() {
                     max="95"
                     value={Math.round((form.custom_responsive_pct || 0.35) * 100)}
                     onChange={(e) => setForm({ ...form, custom_responsive_pct: parseInt(e.target.value) / 100 })}
-                    className="w-full accent-violet-600"
+                    className="w-full accent-white"
                   />
                 </div>
               )}
             </div>
 
             {/* Live Estimation Box */}
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-2 text-xs">
-              <div className="flex items-center justify-between text-slate-500">
+            <div className="p-3.5 rounded-lg bg-[#141414] border border-[#262626] space-y-1.5 text-xs">
+              <div className="flex items-center justify-between text-[#737373]">
                 <span>Est. Responsive Records:</span>
-                <span className="font-mono font-bold text-slate-800">{estimatedResponsive}</span>
+                <span className="font-mono font-medium text-[#F5F5F5]">{estimatedResponsive}</span>
               </div>
-              <div className="flex items-center justify-between text-slate-500">
+              <div className="flex items-center justify-between text-[#737373]">
                 <span>Est. Privileged Withheld:</span>
-                <span className="font-mono font-bold text-slate-800">{estimatedPrivileged}</span>
+                <span className="font-mono font-medium text-[#F5F5F5]">{estimatedPrivileged}</span>
               </div>
-              <div className="flex items-center justify-between text-slate-500">
+              <div className="flex items-center justify-between text-[#737373]">
                 <span>Est. Aggregate Size:</span>
-                <span className="font-mono font-bold text-slate-800">~{estimatedMb} MB</span>
+                <span className="font-mono font-medium text-[#F5F5F5]">~{estimatedMb} MB</span>
               </div>
             </div>
 
             {/* Launch Button */}
             <button
               type="submit"
-              className="w-full py-3.5 bg-gradient-to-r from-violet-600 via-indigo-600 to-violet-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-violet-600/25 transition-all"
+              className="w-full py-3 bg-white hover:bg-[#E5E5E5] text-[#080808] font-semibold rounded-lg text-xs flex items-center justify-center gap-2 transition-all shadow-sm"
             >
-              <Sparkles className="h-4 w-4" />
               <span>Generate Synthetic Dataset</span>
-              <ArrowRight className="h-4 w-4 ml-1" />
+              <ArrowRight className="h-4 w-4" />
             </button>
           </div>
         </div>

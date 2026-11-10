@@ -48,120 +48,120 @@ export default function Settings() {
   const isDbConnected = health?.database === 'connected';
 
   return (
-    <div className="max-w-4xl space-y-6">
+    <div className="p-8 max-w-5xl space-y-6 mx-auto">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-navy-800">Settings & System Info</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="text-xl font-bold text-[#F5F5F5] tracking-tight">Settings & System Info</h1>
+          <p className="text-xs text-[#737373] mt-1">
             Engine status, AI model runtime provider diagnostics, and synthetic data safeguards.
           </p>
         </div>
         <button
           onClick={fetchHealth}
           disabled={refreshing}
-          className="inline-flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#141414] border border-[#262626] rounded-lg text-xs font-medium text-[#A3A3A3] hover:text-[#F5F5F5] hover:bg-[#1a1a1a] transition-colors disabled:opacity-50"
         >
-          <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-          Recheck API
+          <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+          <span>Recheck API</span>
         </button>
       </div>
 
       {/* Diagnostics / Status Cards */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
-        <h2 className="text-base font-semibold text-navy-800 flex items-center gap-2">
-          <Server className="h-5 w-5 text-accent-500" />
-          Runtime Environment & Health
+      <div className="bg-[#111111] rounded-xl border border-[#262626] p-6 space-y-4">
+        <h2 className="text-xs font-mono uppercase tracking-wider text-[#A3A3A3] flex items-center gap-2">
+          <Server className="h-4 w-4" />
+          <span>Runtime Environment & Health</span>
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-          <div className="p-4 rounded-lg bg-gray-50 border border-gray-100">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+          <div className="p-4 rounded-lg bg-[#141414] border border-[#222]">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-xs text-gray-500 font-medium uppercase">API Service</span>
+              <span className="text-[10px] font-mono text-[#737373] uppercase">API Service</span>
               {isHealthy ? (
-                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
               ) : (
-                <AlertTriangle className="h-4 w-4 text-red-500" />
+                <AlertTriangle className="h-3.5 w-3.5 text-rose-400" />
               )}
             </div>
-            <p className="text-lg font-bold text-navy-800 capitalize">{health?.status || 'Unknown'}</p>
-            <p className="text-xs text-gray-400 mt-1">REST backend operational</p>
+            <p className="text-base font-semibold text-[#F5F5F5] capitalize">{health?.status || 'Unknown'}</p>
+            <p className="text-[11px] text-[#737373] mt-1 font-mono">REST backend operational</p>
           </div>
 
-          <div className="p-4 rounded-lg bg-gray-50 border border-gray-100">
+          <div className="p-4 rounded-lg bg-[#141414] border border-[#222]">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-xs text-gray-500 font-medium uppercase">Database</span>
+              <span className="text-[10px] font-mono text-[#737373] uppercase">Database</span>
               {isDbConnected ? (
-                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
               ) : (
-                <AlertTriangle className="h-4 w-4 text-red-500" />
+                <AlertTriangle className="h-3.5 w-3.5 text-rose-400" />
               )}
             </div>
-            <p className="text-lg font-bold text-navy-800 capitalize">{health?.database || 'Unknown'}</p>
-            <p className="text-xs text-gray-400 mt-1">SQLAlchemy ORM layer</p>
+            <p className="text-base font-semibold text-[#F5F5F5] capitalize">{health?.database || 'Unknown'}</p>
+            <p className="text-[11px] text-[#737373] mt-1 font-mono">SQLAlchemy ORM layer</p>
           </div>
 
-          <div className="p-4 rounded-lg bg-gray-50 border border-gray-100">
+          <div className="p-4 rounded-lg bg-[#141414] border border-[#222]">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-xs text-gray-500 font-medium uppercase">AI Scenario Engine</span>
-              <Cpu className="h-4 w-4 text-accent-600" />
+              <span className="text-[10px] font-mono text-[#737373] uppercase">AI Scenario Engine</span>
+              <Cpu className="h-3.5 w-3.5 text-[#A3A3A3]" />
             </div>
-            <p className="text-sm font-semibold text-navy-800 truncate" title={health?.llm_provider}>
+            <p className="text-sm font-semibold text-[#F5F5F5] truncate" title={health?.llm_provider}>
               {health?.llm_provider || 'Mock Engine'}
             </p>
-            <p className="text-xs text-gray-400 mt-1">Hybrid stochastic / LLM</p>
+            <p className="text-[11px] text-[#737373] mt-1 font-mono">Hybrid stochastic / LLM</p>
           </div>
         </div>
       </div>
 
       {/* Project Overview */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
-        <h2 className="text-base font-semibold text-navy-800 flex items-center gap-2">
-          <Info className="h-5 w-5 text-navy-600" />
-          About DiscoSynth AI
+      <div className="bg-[#111111] rounded-xl border border-[#262626] p-6 space-y-4">
+        <h2 className="text-xs font-mono uppercase tracking-wider text-[#A3A3A3] flex items-center gap-2">
+          <Info className="h-4 w-4" />
+          <span>About DiscoSynth AI</span>
         </h2>
-        <div className="text-sm text-gray-600 space-y-3 leading-relaxed">
+        <div className="text-xs text-[#A3A3A3] space-y-3 leading-relaxed">
           <p>
-            <strong>DiscoSynth AI</strong> is an AI-assisted synthetic litigation metadata generator designed
+            <strong className="text-[#F5F5F5]">DiscoSynth AI</strong> is an AI-assisted synthetic litigation metadata generator designed
             for electronic discovery (e-discovery) benchmarking, legal-tech software testing, and machine
             learning validation.
           </p>
           <p>
             Because law firms and corporate legal departments are legally and ethically bound by attorney-client
             privilege, GDPR, HIPAA, and protective orders, sharing realistic litigation data has historically been
-            nearly impossible. DiscoSynth AI bridges this gap by generating <em>logically consistent document metadata</em>
+            nearly impossible. DiscoSynth AI bridges this gap by generating <em className="text-[#F5F5F5]">logically consistent document metadata</em>
             without requiring or touching any genuine litigation documents.
           </p>
-          <div className="pt-2 border-t border-gray-100 flex flex-wrap gap-4 text-xs text-gray-500">
+          <div className="pt-3 border-t border-[#1e1e1e] flex flex-wrap gap-4 text-[11px] font-mono text-[#737373]">
             <div>
-              <span className="font-semibold text-gray-700">Architecture:</span> React + Vite + FastAPI + SQLAlchemy
+              <span className="text-[#A3A3A3]">Stack:</span> React + Vite + FastAPI + SQLAlchemy
             </div>
             <div>
-              <span className="font-semibold text-gray-700">Storage:</span> PostgreSQL / SQLite Fallback
+              <span className="text-[#A3A3A3]">Storage:</span> PostgreSQL / SQLite Fallback
             </div>
             <div>
-              <span className="font-semibold text-gray-700">GenAI:</span> Google Gemini / Configurable Provider
+              <span className="text-[#A3A3A3]">GenAI:</span> Google Gemini / Configurable Provider
             </div>
           </div>
         </div>
       </div>
 
       {/* Synthetic Data Disclaimer */}
-      <div className="bg-amber-50/70 border border-amber-200 rounded-xl p-6">
+      <div className="bg-[#111111] border border-[#262626] rounded-xl p-6">
         <div className="flex items-start gap-3">
-          <ShieldAlert className="h-6 w-6 text-amber-700 shrink-0 mt-0.5" />
-          <div className="space-y-2 text-sm text-amber-900">
-            <h3 className="font-bold text-amber-950">Ethical Notice & Synthetic Data Disclaimer</h3>
-            <p>
-              1. <strong>Exclusively Synthetic:</strong> All identities, custodian names, corporations, case numbers,
+          <ShieldAlert className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
+          <div className="space-y-2 text-xs text-[#A3A3A3]">
+            <h3 className="font-semibold text-[#F5F5F5]">Ethical Notice & Synthetic Data Disclaimer</h3>
+            <p className="leading-relaxed">
+              1. <strong className="text-[#F5F5F5]">Exclusively Synthetic:</strong> All identities, custodian names, corporations, case numbers,
               dates, and classifications generated by DiscoSynth AI are entirely fictitious and procedural. Any resemblance
               to real persons, active litigations, or existing corporations is purely coincidental.
             </p>
-            <p>
-              2. <strong>Metadata Only:</strong> The platform produces structured litigation document metadata records
+            <p className="leading-relaxed">
+              2. <strong className="text-[#F5F5F5]">Metadata Only:</strong> The platform produces structured litigation document metadata records
               (e.g., custodian relationships, issue tags, responsive flags, privilege logs), NOT actual legal text or
               evidentiary document files.
             </p>
-            <p>
-              3. <strong>No Confidential Ingestion:</strong> The platform does not require or accept confidential enterprise
+            <p className="leading-relaxed">
+              3. <strong className="text-[#F5F5F5]">No Confidential Ingestion:</strong> The platform does not require or accept confidential enterprise
               files as input. It operates using generative scenario prompts and statistical probability models.
             </p>
           </div>

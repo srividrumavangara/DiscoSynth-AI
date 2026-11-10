@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { X, ChevronDown } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 
 interface BottomScrollUpProps {
   isOpen: boolean;
@@ -29,27 +29,27 @@ export default function BottomScrollUp({
   return (
     <div className="fixed inset-0 z-50 overflow-hidden flex items-end justify-center">
       <div
-        className="fixed inset-0 bg-slate-950/40 backdrop-blur-xs transition-opacity animate-in fade-in"
+        className="fixed inset-0 bg-black/75 backdrop-blur-xs transition-opacity"
         onClick={onClose}
       />
 
-      <div className="relative w-full max-w-4xl max-h-[85vh] bg-white rounded-t-2xl shadow-2xl border-t border-slate-200/80 flex flex-col z-10 animate-in slide-in-from-bottom duration-300">
+      <div className="relative w-full max-w-4xl max-h-[85vh] bg-[#0e0e0e] text-[#F5F5F5] rounded-t-2xl shadow-2xl border-t border-x border-[#262626] flex flex-col z-10 duration-300">
         {/* Grab bar */}
         <div className="w-full flex justify-center pt-2">
-          <div className="w-12 h-1.5 rounded-full bg-slate-300" />
+          <div className="w-12 h-1 rounded-full bg-[#303030]" />
         </div>
 
         {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+        <div className="px-6 py-4 border-b border-[#262626] flex items-center justify-between">
           <div>
-            <h2 className="text-base font-semibold text-slate-900">{title}</h2>
-            {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
+            <h2 className="text-sm font-semibold text-[#F5F5F5]">{title}</h2>
+            {subtitle && <p className="text-[11px] text-[#737373] mt-0.5">{subtitle}</p>}
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+            className="p-1.5 text-[#737373] hover:text-[#F5F5F5] hover:bg-[#202020] rounded-md transition-colors"
           >
-            <ChevronDown className="h-5 w-5" />
+            <ChevronDown className="h-4 w-4" />
           </button>
         </div>
 

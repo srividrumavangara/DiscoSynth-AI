@@ -5,25 +5,24 @@ interface StatsCardProps {
   value: string | number;
   subtitle?: string;
   icon: ReactNode;
-  iconBg?: string;
   trend?: { value: string; positive: boolean };
 }
 
-export default function StatsCard({ title, value, subtitle, icon, iconBg = 'bg-accent-100', trend }: StatsCardProps) {
+export default function StatsCard({ title, value, subtitle, icon, trend }: StatsCardProps) {
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+    <div className="bg-[#111111] rounded-xl border border-[#262626] p-5 shadow-sm hover:border-[#333333] transition-colors">
       <div className="flex items-start justify-between">
         <div className="flex-1">
-          <p className="text-sm font-medium text-gray-500 mb-1">{title}</p>
-          <p className="text-2xl font-bold text-navy-800">{value}</p>
-          {subtitle && <p className="text-xs text-gray-400 mt-1">{subtitle}</p>}
+          <p className="text-[11px] font-mono uppercase tracking-wider text-[#737373] mb-1.5">{title}</p>
+          <p className="text-2xl font-bold tracking-tight text-[#F5F5F5]">{value}</p>
+          {subtitle && <p className="text-xs text-[#737373] mt-1.5">{subtitle}</p>}
           {trend && (
-            <p className={`text-xs mt-1 font-medium ${trend.positive ? 'text-green-600' : 'text-red-600'}`}>
+            <p className={`text-xs mt-1.5 font-mono ${trend.positive ? 'text-emerald-400' : 'text-rose-400'}`}>
               {trend.value}
             </p>
           )}
         </div>
-        <div className={`${iconBg} p-3 rounded-lg`}>
+        <div className="p-2.5 rounded-lg bg-[#191919] border border-[#303030] text-[#A3A3A3]">
           {icon}
         </div>
       </div>

@@ -11,11 +11,11 @@ interface EmptyStateProps {
 export default function EmptyState({ icon, title, description, action }: EmptyStateProps) {
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
-      <div className="mb-4 text-gray-300">
-        {icon || <FileQuestion className="h-16 w-16" />}
+      <div className="mb-4 text-[#555]">
+        {icon || <FileQuestion className="h-12 w-12 stroke-[1.5]" />}
       </div>
-      <h3 className="text-lg font-semibold text-gray-700 mb-2">{title}</h3>
-      <p className="text-gray-500 text-sm max-w-md mb-6">{description}</p>
+      <h3 className="text-base font-semibold text-[#F5F5F5] mb-1.5">{title}</h3>
+      <p className="text-xs text-[#737373] max-w-sm mb-6 leading-relaxed">{description}</p>
       {action}
     </div>
   );

@@ -5,12 +5,8 @@ import {
   Search,
   Copy,
   Check,
-  Eye,
-  FileCode,
-  Shield,
   Layers,
   ChevronRight,
-  Database,
   SlidersHorizontal,
 } from 'lucide-react';
 import DataTable, { type Column } from '../components/DataTable';
@@ -21,9 +17,10 @@ import { getDatasets, getDataset, getDatasetRecords, getExportUrl } from '../api
 import type { Dataset, DocumentMetadata, PaginatedResponse } from '../types';
 
 export default function DatasetExplorer() {
-  const { datasetId } = useParams<{ datasetId: string }>();
-  if (!datasetId) return <DatasetPicker />;
-  return <DatasetView datasetId={datasetId} />;
+  const { datasetId, id } = useParams<{ datasetId?: string; id?: string }>();
+  const activeId = datasetId || id;
+  if (!activeId) return <DatasetPicker />;
+  return <DatasetView datasetId={activeId} />;
 }
 
 function DatasetPicker() {
@@ -41,10 +38,10 @@ function DatasetPicker() {
   if (loading) return <LoadingSpinner message="Locating litigation matters..." />;
 
   return (
-    <div className="space-y-6">
+    <div className="p-8 space-y-6 max-w-7xl mx-auto">
       <div>
-        <h1 className="text-xl font-bold text-slate-900 tracking-tight">Dataset Explorer</h1>
-        <p className="text-xs text-slate-500 mt-1">
+        <h1 className="text-xl font-bold text-[#F5F5F5] tracking-tight">Dataset Explorer</h1>
+        <p className="text-xs text-[#737373] mt-1">
           Select a litigation metadata dataset to inspect records, document families, and privilege logs.
         </p>
       </div>
@@ -55,8 +52,8 @@ function DatasetPicker() {
           description="Generate your first synthetic litigation matter to browse records."
           action={
             <Link
-              to="/generate"
-              className="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-semibold hover:bg-slate-800 transition-colors"
+              to="/app/generate"
+              className="px-4 py-2 bg-white text-[#080808] rounded-lg text-xs font-semibold hover:bg-[#E5E5E5] transition-colors"
             >
               Generate Dataset
             </Link>
@@ -67,26 +64,26 @@ function DatasetPicker() {
           {datasets.map((ds) => (
             <div
               key={ds.id}
-              onClick={() => navigate(`/explorer/${ds.id}`)}
-              className="bg-white rounded-2xl shadow-xs border border-slate-200/90 p-5 text-left hover:border-violet-500 hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
+              onClick={() => navigate(`/app/datasets/${ds.id}/explorer`)}
+              className="bg-[#111111] rounded-xl border border-[#262626] p-5 text-left hover:border-[#404040] transition-all cursor-pointer group flex flex-col justify-between"
             >
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-mono font-semibold uppercase px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-[10px] font-mono font-medium uppercase px-2 py-0.5 rounded bg-[#191919] text-[#A3A3A3] border border-[#303030]">
                     {ds.scenario.replace(/_/g, ' ')}
                   </span>
-                  <span className="text-[10px] font-mono text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                    {ds.quality_score}% Quality
+                  <span className="text-[10px] font-mono text-[#F5F5F5] bg-[#191919] px-2 py-0.5 rounded border border-[#303030]">
+                    {ds.quality_score ? `${ds.quality_score.toFixed(1)}% Quality` : '—'}
                   </span>
                 </div>
-                <h3 className="font-bold text-slate-800 group-hover:text-violet-600 transition-colors text-sm">
+                <h3 className="font-semibold text-[#F5F5F5] group-hover:text-white transition-colors text-sm">
                   {ds.name}
                 </h3>
               </div>
 
-              <div className="pt-4 border-t border-slate-100 mt-4 flex items-center justify-between text-xs text-slate-500">
+              <div className="pt-4 border-t border-[#1e1e1e] mt-4 flex items-center justify-between text-xs text-[#737373]">
                 <span className="font-mono">{ds.num_records.toLocaleString()} records</span>
-                <span className="font-medium text-violet-600 flex items-center gap-1">
+                <span className="font-medium text-[#F5F5F5] flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
                   Explore <ChevronRight className="h-3.5 w-3.5" />
                 </span>
               </div>
@@ -161,7 +158,7 @@ function DatasetView({ datasetId }: { datasetId: string }) {
       key: 'document_id',
       header: 'Document ID',
       render: (r) => (
-        <span className="font-mono text-xs font-semibold text-slate-800 hover:text-violet-600">
+        <span className="font-mono text-xs font-semibold text-[#F5F5F5]">
           {r.document_id}
         </span>
       ),
@@ -170,7 +167,7 @@ function DatasetView({ datasetId }: { datasetId: string }) {
       key: 'document_type',
       header: 'Document Type',
       render: (r) => (
-        <span className="capitalize px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[11px] font-medium">
+        <span className="capitalize px-2 py-0.5 rounded bg-[#191919] text-[#A3A3A3] border border-[#303030] text-[11px] font-mono">
           {r.document_type.replace(/_/g, ' ')}
         </span>
       ),
@@ -180,8 +177,8 @@ function DatasetView({ datasetId }: { datasetId: string }) {
       header: 'Custodian / Role',
       render: (r) => (
         <div>
-          <p className="font-medium text-slate-800 text-xs">{r.fictional_custodian_name}</p>
-          <p className="text-[10px] text-slate-400 capitalize">{r.custodian_role.replace(/_/g, ' ')}</p>
+          <p className="font-medium text-[#F5F5F5] text-xs">{r.fictional_custodian_name}</p>
+          <p className="text-[10px] text-[#737373] capitalize">{r.custodian_role.replace(/_/g, ' ')}</p>
         </div>
       ),
     },
@@ -189,7 +186,7 @@ function DatasetView({ datasetId }: { datasetId: string }) {
       key: 'date_created',
       header: 'Date Created',
       render: (r) => (
-        <span className="text-slate-500 font-mono text-[11px]">
+        <span className="text-[#A3A3A3] font-mono text-[11px]">
           {new Date(r.date_created).toLocaleDateString()}
         </span>
       ),
@@ -199,8 +196,10 @@ function DatasetView({ datasetId }: { datasetId: string }) {
       header: 'Responsive',
       render: (r) => (
         <span
-          className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-            r.responsive ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'
+          className={`px-2 py-0.5 rounded font-mono text-[10px] font-medium border ${
+            r.responsive
+              ? 'bg-emerald-950/40 text-emerald-400 border-emerald-800/60'
+              : 'bg-[#191919] text-[#737373] border-[#303030]'
           }`}
         >
           {r.responsive ? 'Yes' : 'No'}
@@ -212,12 +211,12 @@ function DatasetView({ datasetId }: { datasetId: string }) {
       header: 'Privilege Log',
       render: (r) => (
         <span
-          className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+          className={`px-2 py-0.5 rounded font-mono text-[10px] font-medium border ${
             r.privilege_status === 'privileged'
-              ? 'bg-rose-100 text-rose-800 border border-rose-200'
+              ? 'bg-rose-950/40 text-rose-300 border-rose-800/60'
               : r.privilege_status === 'partially_privileged'
-              ? 'bg-amber-100 text-amber-800 border border-amber-200'
-              : 'bg-slate-100 text-slate-600'
+              ? 'bg-amber-950/40 text-amber-300 border-amber-800/60'
+              : 'bg-[#191919] text-[#A3A3A3] border-[#303030]'
           }`}
         >
           {r.privilege_status.replace(/_/g, ' ')}
@@ -228,7 +227,7 @@ function DatasetView({ datasetId }: { datasetId: string }) {
       key: 'confidentiality_level',
       header: 'Confidentiality',
       render: (r) => (
-        <span className="text-[11px] text-slate-600 font-medium capitalize">
+        <span className="text-[11px] text-[#A3A3A3] font-medium capitalize">
           {r.confidentiality_level.replace(/_/g, ' ')}
         </span>
       ),
@@ -236,51 +235,51 @@ function DatasetView({ datasetId }: { datasetId: string }) {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="p-8 space-y-6 max-w-7xl mx-auto">
       {/* Header Bar */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200/90 shadow-xs">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-[#111111] p-6 rounded-xl border border-[#262626]">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-[11px] font-mono uppercase font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[#191919] text-[#A3A3A3] border border-[#303030]">
               {dataset.scenario.replace(/_/g, ' ')}
             </span>
-            <span className="text-slate-300">•</span>
-            <span className="text-xs text-slate-500 font-mono">
+            <span className="text-[#303030]">&bull;</span>
+            <span className="text-xs text-[#737373] font-mono">
               {dataset.num_records.toLocaleString()} total documents
             </span>
           </div>
-          <h1 className="text-xl font-bold text-slate-900 tracking-tight">{dataset.name}</h1>
+          <h1 className="text-xl font-bold text-[#F5F5F5] tracking-tight">{dataset.name}</h1>
         </div>
 
         <div className="flex items-center gap-2">
           <a
             href={getExportUrl(datasetId, 'csv')}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-semibold text-slate-700 shadow-xs transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-[#191919] border border-[#303030] hover:bg-[#202020] rounded-lg text-xs font-medium text-[#D4D4D4] transition-colors"
           >
             <Download className="h-3.5 w-3.5" />
-            <span>Export CSV</span>
+            <span>CSV</span>
           </a>
           <a
             href={getExportUrl(datasetId, 'json')}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-semibold text-slate-700 shadow-xs transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-[#191919] border border-[#303030] hover:bg-[#202020] rounded-lg text-xs font-medium text-[#D4D4D4] transition-colors"
           >
             <Download className="h-3.5 w-3.5" />
-            <span>Export JSON</span>
+            <span>JSON</span>
           </a>
           <Link
-            to={`/analytics/${datasetId}`}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors"
+            to={`/app/datasets/${datasetId}/analytics`}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white text-[#080808] hover:bg-[#E5E5E5] rounded-lg text-xs font-semibold transition-all"
           >
-            <SlidersHorizontal className="h-3.5 w-3.5 text-violet-400" />
+            <SlidersHorizontal className="h-3.5 w-3.5" />
             <span>Analytics</span>
           </Link>
         </div>
       </div>
 
       {/* Filter Toolbar */}
-      <div className="bg-white p-3 rounded-2xl border border-slate-200/90 shadow-xs flex flex-wrap items-center gap-3">
+      <div className="bg-[#111111] p-3 rounded-xl border border-[#262626] flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-[240px]">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#737373]" />
           <input
             type="text"
             placeholder="Search Document ID, Custodian Name, Organization..."
@@ -289,7 +288,7 @@ function DatasetView({ datasetId }: { datasetId: string }) {
               setSearch(e.target.value);
               setPage(1);
             }}
-            className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+            className="w-full pl-9 pr-3 py-2 bg-[#191919] border border-[#303030] rounded-lg text-xs text-[#F5F5F5] placeholder-[#555] focus:outline-none focus:border-[#737373]"
           />
         </div>
 
@@ -299,7 +298,7 @@ function DatasetView({ datasetId }: { datasetId: string }) {
             setDocTypeFilter(e.target.value);
             setPage(1);
           }}
-          className="px-3 py-2 border border-slate-200 rounded-xl text-xs text-slate-700 bg-white"
+          className="px-3 py-2 border border-[#303030] rounded-lg text-xs text-[#F5F5F5] bg-[#191919] focus:outline-none"
         >
           <option value="">All Document Types</option>
           {['email', 'pdf', 'docx', 'xlsx', 'internal_memo', 'financial_report', 'contract'].map(
@@ -317,7 +316,7 @@ function DatasetView({ datasetId }: { datasetId: string }) {
             setResponsiveFilter(e.target.value);
             setPage(1);
           }}
-          className="px-3 py-2 border border-slate-200 rounded-xl text-xs text-slate-700 bg-white"
+          className="px-3 py-2 border border-[#303030] rounded-lg text-xs text-[#F5F5F5] bg-[#191919] focus:outline-none"
         >
           <option value="">All Responsiveness</option>
           <option value="true">Responsive (Relevance True)</option>
@@ -330,7 +329,7 @@ function DatasetView({ datasetId }: { datasetId: string }) {
             setPrivilegeFilter(e.target.value);
             setPage(1);
           }}
-          className="px-3 py-2 border border-slate-200 rounded-xl text-xs text-slate-700 bg-white"
+          className="px-3 py-2 border border-[#303030] rounded-lg text-xs text-[#F5F5F5] bg-[#191919] focus:outline-none"
         >
           <option value="">All Privilege Statuses</option>
           <option value="privileged">Privileged (Withheld)</option>
@@ -352,7 +351,7 @@ function DatasetView({ datasetId }: { datasetId: string }) {
         />
       )}
 
-      {/* Figma-Style Side Inspector Drawer for Selected Record */}
+      {/* Side Inspector Drawer */}
       <SlideOver
         isOpen={Boolean(selected)}
         onClose={() => setSelected(null)}
@@ -362,10 +361,10 @@ function DatasetView({ datasetId }: { datasetId: string }) {
         actions={
           <button
             onClick={copyJson}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
+            className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md bg-[#191919] hover:bg-[#202020] text-[#D4D4D4] border border-[#303030] transition-colors"
           >
-            {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
-            <span>{copied ? 'Copied JSON' : 'Copy Record'}</span>
+            {copied ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+            <span>{copied ? 'Copied' : 'Copy Record'}</span>
           </button>
         }
       >
@@ -373,31 +372,33 @@ function DatasetView({ datasetId }: { datasetId: string }) {
           <div className="space-y-6">
             {/* Quick Status Pills Header */}
             <div className="flex flex-wrap items-center gap-2">
-              <span className="px-2.5 py-1 rounded-md text-xs font-mono font-semibold bg-slate-100 text-slate-800">
+              <span className="px-2.5 py-1 rounded bg-[#191919] border border-[#303030] text-xs font-mono text-[#F5F5F5]">
                 {selected.file_type} ({selected.file_size_kb} KB)
               </span>
               <span
-                className={`px-2.5 py-1 rounded-md text-xs font-semibold ${
-                  selected.responsive ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'
+                className={`px-2.5 py-1 rounded text-xs font-mono border ${
+                  selected.responsive
+                    ? 'bg-emerald-950/40 text-emerald-400 border-emerald-800/60'
+                    : 'bg-[#191919] text-[#737373] border-[#303030]'
                 }`}
               >
                 {selected.responsive ? 'Responsive' : 'Non-Responsive'}
               </span>
               <span
-                className={`px-2.5 py-1 rounded-md text-xs font-semibold ${
+                className={`px-2.5 py-1 rounded text-xs font-mono border ${
                   selected.privilege_status === 'privileged'
-                    ? 'bg-rose-100 text-rose-800'
+                    ? 'bg-rose-950/40 text-rose-300 border-rose-800/60'
                     : selected.privilege_status === 'partially_privileged'
-                    ? 'bg-amber-100 text-amber-800'
-                    : 'bg-slate-100 text-slate-600'
+                    ? 'bg-amber-950/40 text-amber-300 border-amber-800/60'
+                    : 'bg-[#191919] text-[#A3A3A3] border-[#303030]'
                 }`}
               >
                 {selected.privilege_status.replace(/_/g, ' ')}
               </span>
             </div>
 
-            {/* Figma-Style Tabs */}
-            <div className="flex border-b border-slate-200 text-xs font-medium">
+            {/* Navigation Tabs */}
+            <div className="flex border-b border-[#262626] text-xs font-medium">
               {[
                 { id: 'overview', label: 'Overview' },
                 { id: 'privilege', label: 'Privilege & Legal' },
@@ -407,10 +408,10 @@ function DatasetView({ datasetId }: { datasetId: string }) {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
-                  className={`px-4 py-2.5 border-b-2 font-semibold transition-colors ${
+                  className={`px-4 py-2.5 border-b-2 font-medium transition-colors ${
                     activeTab === tab.id
-                      ? 'border-violet-600 text-violet-700'
-                      : 'border-transparent text-slate-500 hover:text-slate-800'
+                      ? 'border-white text-white'
+                      : 'border-transparent text-[#737373] hover:text-[#A3A3A3]'
                   }`}
                 >
                   {tab.label}
@@ -421,52 +422,52 @@ function DatasetView({ datasetId }: { datasetId: string }) {
             {/* Tab 1: Overview */}
             {activeTab === 'overview' && (
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100 text-xs">
+                <div className="grid grid-cols-2 gap-3 bg-[#141414] p-4 rounded-xl border border-[#262626] text-xs">
                   <div>
-                    <span className="text-slate-400 block text-[11px]">Custodian</span>
-                    <span className="font-semibold text-slate-800 text-sm">
+                    <span className="text-[#737373] block text-[10px] font-mono uppercase">Custodian</span>
+                    <span className="font-semibold text-[#F5F5F5] text-xs mt-0.5 block">
                       {selected.fictional_custodian_name}
                     </span>
                   </div>
                   <div>
-                    <span className="text-slate-400 block text-[11px]">Custodian Role</span>
-                    <span className="font-medium text-slate-700 capitalize">
+                    <span className="text-[#737373] block text-[10px] font-mono uppercase">Custodian Role</span>
+                    <span className="text-[#D4D4D4] capitalize text-xs mt-0.5 block">
                       {selected.custodian_role.replace(/_/g, ' ')}
                     </span>
                   </div>
                   <div>
-                    <span className="text-slate-400 block text-[11px]">Fictional Entity</span>
-                    <span className="font-medium text-slate-800">{selected.fictional_organization}</span>
+                    <span className="text-[#737373] block text-[10px] font-mono uppercase">Fictional Entity</span>
+                    <span className="text-[#D4D4D4] text-xs mt-0.5 block">{selected.fictional_organization}</span>
                   </div>
                   <div>
-                    <span className="text-slate-400 block text-[11px]">Document Type</span>
-                    <span className="font-medium text-slate-800 capitalize">
+                    <span className="text-[#737373] block text-[10px] font-mono uppercase">Document Type</span>
+                    <span className="text-[#D4D4D4] capitalize text-xs mt-0.5 block">
                       {selected.document_type.replace(/_/g, ' ')}
                     </span>
                   </div>
                   <div>
-                    <span className="text-slate-400 block text-[11px]">Date Created</span>
-                    <span className="font-mono text-slate-700">
+                    <span className="text-[#737373] block text-[10px] font-mono uppercase">Date Created</span>
+                    <span className="font-mono text-[#A3A3A3] text-xs mt-0.5 block">
                       {new Date(selected.date_created).toLocaleString()}
                     </span>
                   </div>
                   <div>
-                    <span className="text-slate-400 block text-[11px]">Date Modified</span>
-                    <span className="font-mono text-slate-700">
+                    <span className="text-[#737373] block text-[10px] font-mono uppercase">Date Modified</span>
+                    <span className="font-mono text-[#A3A3A3] text-xs mt-0.5 block">
                       {new Date(selected.date_modified).toLocaleString()}
                     </span>
                   </div>
                 </div>
 
-                <div className="p-4 rounded-xl bg-violet-50/50 border border-violet-100 flex items-center justify-between text-xs">
+                <div className="p-3.5 rounded-xl bg-[#141414] border border-[#262626] flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2">
-                    <Layers className="h-4 w-4 text-violet-600" />
-                    <span className="font-semibold text-violet-900">Document Family:</span>
-                    <span className="font-mono text-violet-700">
+                    <Layers className="h-4 w-4 text-[#A3A3A3]" />
+                    <span className="text-[#737373]">Family ID:</span>
+                    <span className="font-mono text-[#F5F5F5]">
                       {selected.document_family_id || 'Standalone Document'}
                     </span>
                   </div>
-                  <span className="font-mono font-bold text-violet-800">
+                  <span className="font-mono text-[11px] text-[#A3A3A3]">
                     {selected.attachment_count} attachment(s)
                   </span>
                 </div>
@@ -476,41 +477,41 @@ function DatasetView({ datasetId }: { datasetId: string }) {
             {/* Tab 2: Privilege & Legal */}
             {activeTab === 'privilege' && (
               <div className="space-y-4 text-xs">
-                <div className="p-4 rounded-xl border border-slate-100 bg-slate-50 space-y-3">
+                <div className="p-4 rounded-xl border border-[#262626] bg-[#141414] space-y-2.5">
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-500">Privilege Classification:</span>
-                    <span className="font-bold text-slate-800 capitalize">
+                    <span className="text-[#737373]">Privilege Classification:</span>
+                    <span className="font-medium text-[#F5F5F5] capitalize">
                       {selected.privilege_status.replace(/_/g, ' ')}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-500">Confidentiality Tier:</span>
-                    <span className="font-bold text-slate-800 capitalize">
+                    <span className="text-[#737373]">Confidentiality Tier:</span>
+                    <span className="font-medium text-[#F5F5F5] capitalize">
                       {selected.confidentiality_level.replace(/_/g, ' ')}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-500">Subject to Legal Hold:</span>
-                    <span className={`font-semibold ${selected.legal_hold ? 'text-rose-600' : 'text-slate-600'}`}>
-                      {selected.legal_hold ? 'Yes (Preservation Required)' : 'No'}
+                    <span className="text-[#737373]">Subject to Legal Hold:</span>
+                    <span className={`font-mono ${selected.legal_hold ? 'text-rose-400' : 'text-[#737373]'}`}>
+                      {selected.legal_hold ? 'Yes (Preservation Active)' : 'No'}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-500">Redaction Required:</span>
-                    <span className={`font-semibold ${selected.redaction_required ? 'text-amber-700' : 'text-slate-600'}`}>
-                      {selected.redaction_required ? 'Yes (PII/Privileged Content)' : 'No'}
+                    <span className="text-[#737373]">Redaction Required:</span>
+                    <span className={`font-mono ${selected.redaction_required ? 'text-amber-400' : 'text-[#737373]'}`}>
+                      {selected.redaction_required ? 'Yes (PII / Sensitive Content)' : 'No'}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-500">Review Workflow Status:</span>
-                    <span className="font-bold text-slate-800 capitalize">
+                    <span className="text-[#737373]">Review Status:</span>
+                    <span className="font-medium text-[#F5F5F5] capitalize">
                       {selected.review_status.replace(/_/g, ' ')}
                     </span>
                   </div>
                   {selected.communication_channel && (
                     <div className="flex items-center justify-between">
-                      <span className="text-slate-500">Email Channel:</span>
-                      <span className="font-mono font-semibold text-slate-800">
+                      <span className="text-[#737373]">Email Channel:</span>
+                      <span className="font-mono text-[#F5F5F5]">
                         {selected.communication_channel}
                       </span>
                     </div>
@@ -523,14 +524,14 @@ function DatasetView({ datasetId }: { datasetId: string }) {
             {activeTab === 'tags' && (
               <div className="space-y-4 text-xs">
                 <div>
-                  <h4 className="text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
+                  <h4 className="text-[10px] font-mono text-[#737373] uppercase tracking-wider mb-2">
                     Tagged Litigation Issues
                   </h4>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-1.5">
                     {selected.issue_tags.map((tag) => (
                       <span
                         key={tag}
-                        className="px-3 py-1 rounded-lg bg-indigo-50 text-indigo-700 font-semibold text-xs border border-indigo-200"
+                        className="px-2.5 py-1 rounded bg-[#191919] text-[#D4D4D4] font-mono text-[11px] border border-[#303030]"
                       >
                         #{tag}
                       </span>
@@ -538,12 +539,12 @@ function DatasetView({ datasetId }: { datasetId: string }) {
                   </div>
                 </div>
 
-                <div className="pt-4 border-t border-slate-100">
-                  <h4 className="text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
+                <div className="pt-4 border-t border-[#262626]">
+                  <h4 className="text-[10px] font-mono text-[#737373] uppercase tracking-wider mb-1.5">
                     Matter Venue & Jurisdiction
                   </h4>
-                  <p className="text-sm font-semibold text-slate-800">{selected.jurisdiction}</p>
-                  <p className="text-xs text-slate-400 mt-1">Language: {selected.language.toUpperCase()}</p>
+                  <p className="text-xs font-semibold text-[#F5F5F5]">{selected.jurisdiction}</p>
+                  <p className="text-[11px] text-[#737373] mt-0.5 font-mono">Language: {selected.language.toUpperCase()}</p>
                 </div>
               </div>
             )}
@@ -551,7 +552,7 @@ function DatasetView({ datasetId }: { datasetId: string }) {
             {/* Tab 4: Raw JSON */}
             {activeTab === 'json' && (
               <div className="relative">
-                <pre className="p-4 bg-slate-900 text-slate-100 rounded-xl text-[11px] font-mono overflow-x-auto max-h-96 leading-relaxed">
+                <pre className="p-4 bg-[#080808] border border-[#262626] text-[#A3A3A3] rounded-lg text-[11px] font-mono overflow-x-auto max-h-96 leading-relaxed">
                   {JSON.stringify(selected, null, 2)}
                 </pre>
               </div>
