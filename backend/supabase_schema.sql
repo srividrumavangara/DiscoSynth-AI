@@ -2,7 +2,7 @@
 -- DISCOSYNTH AI — PRODUCTION SUPABASE POSTGRESQL SCHEMA & ROW LEVEL SECURITY
 -- ==============================================================================
 -- Paste this script into the Supabase SQL Editor (Project -> SQL Editor -> New Query)
--- and click Run.
+-- and click Run. Safe to re-run (idempotent).
 
 -- 1. Enable required extensions
 create extension if not exists "uuid-ossp";
@@ -37,7 +37,6 @@ begin
 end;
 $$ language plpgsql security definer;
 
--- Drop trigger if exists and recreate
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
     after insert or update on auth.users
@@ -111,7 +110,7 @@ create index if not exists ix_gen_hist_user_id on public.generation_history(user
 create index if not exists ix_gen_hist_dataset_id on public.generation_history(dataset_id);
 
 -- ==============================================================================
--- 7. ROW LEVEL SECURITY (RLS) POLICIES
+-- 7. ROW LEVEL SECURITY (RLS) POLICIES (Idempotent)
 -- ==============================================================================
 
 -- Enable RLS on all user-owned tables
@@ -121,32 +120,39 @@ alter table public.document_metadata enable row level security;
 alter table public.generation_history enable row level security;
 
 -- Profiles Policies
+drop policy if exists "Users can read own profile" on public.profiles;
 create policy "Users can read own profile"
     on public.profiles for select
     using (auth.uid() = id);
 
+drop policy if exists "Users can update own profile" on public.profiles;
 create policy "Users can update own profile"
     on public.profiles for update
     using (auth.uid() = id);
 
 -- Datasets Policies
+drop policy if exists "Users can read own datasets" on public.datasets;
 create policy "Users can read own datasets"
     on public.datasets for select
     using (auth.uid() = user_id);
 
+drop policy if exists "Users can insert own datasets" on public.datasets;
 create policy "Users can insert own datasets"
     on public.datasets for insert
     with check (auth.uid() = user_id);
 
+drop policy if exists "Users can update own datasets" on public.datasets;
 create policy "Users can update own datasets"
     on public.datasets for update
     using (auth.uid() = user_id);
 
+drop policy if exists "Users can delete own datasets" on public.datasets;
 create policy "Users can delete own datasets"
     on public.datasets for delete
     using (auth.uid() = user_id);
 
 -- Document Metadata Policies (Derived from Dataset Ownership)
+drop policy if exists "Users can read documents belonging to their own datasets" on public.document_metadata;
 create policy "Users can read documents belonging to their own datasets"
     on public.document_metadata for select
     using (
@@ -157,6 +163,7 @@ create policy "Users can read documents belonging to their own datasets"
         )
     );
 
+drop policy if exists "Users can insert documents into their own datasets" on public.document_metadata;
 create policy "Users can insert documents into their own datasets"
     on public.document_metadata for insert
     with check (
@@ -167,6 +174,7 @@ create policy "Users can insert documents into their own datasets"
         )
     );
 
+drop policy if exists "Users can delete documents belonging to their own datasets" on public.document_metadata;
 create policy "Users can delete documents belonging to their own datasets"
     on public.document_metadata for delete
     using (
@@ -178,10 +186,12 @@ create policy "Users can delete documents belonging to their own datasets"
     );
 
 -- Generation History Policies
+drop policy if exists "Users can read own generation history" on public.generation_history;
 create policy "Users can read own generation history"
     on public.generation_history for select
     using (auth.uid() = user_id);
 
+drop policy if exists "Users can insert own generation history" on public.generation_history;
 create policy "Users can insert own generation history"
     on public.generation_history for insert
     with check (auth.uid() = user_id);
