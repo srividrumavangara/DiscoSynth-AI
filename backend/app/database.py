@@ -1,85 +1,38 @@
-"""SQLAlchemy database engine and session management."""
+from pymongo import MongoClient
+from pymongo.database import Database
+import logging
+from app.config import settings
 
-from __future__ import annotations
+logger = logging.getLogger(__name__)
 
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import Session, declarative_base, sessionmaker
+client: MongoClient = None
+db: Database = None
 
-from app.config import get_settings
+def get_database() -> Database:
+    global client, db
+    if db is None:
+        try:
+            client = MongoClient(settings.MONGODB_URI, serverSelectionTimeoutMS=5000)
+            db = client[settings.DATABASE_NAME]
+            # Ensure indexes on datasets collection
+            db.datasets.create_index("dataset_id", unique=True)
+            db.datasets.create_index("created_at")
+            db.datasets.create_index("scenario_type")
+            # Ensure indexes on generation_jobs collection
+            db.generation_jobs.create_index("job_id", unique=True)
+            db.generation_jobs.create_index("dataset_id")
+            db.generation_jobs.create_index("started_at")
+            logger.info("Connected to MongoDB: %s", settings.DATABASE_NAME)
+        except Exception as e:
+            logger.error("Failed to connect to MongoDB: %s", e)
+            raise e
+    return db
 
-Base = declarative_base()
-
-_engine = None
-_SessionLocal: sessionmaker[Session] | None = None
-
-
-def _get_engine():
-    """Create or return the singleton SQLAlchemy engine."""
-    global _engine
-    if _engine is None:
-        settings = get_settings()
-        url = settings.normalized_database_url
-
-        connect_args: dict = {}
-        engine_kwargs: dict = {
-            "echo": False,
-        }
-
-        if url.startswith("sqlite"):
-            connect_args["check_same_thread"] = False
-        else:
-            # Production PostgreSQL connection pooling (ideal for Supabase Transaction Pooler)
-            engine_kwargs["pool_pre_ping"] = True
-            engine_kwargs["pool_size"] = 10
-            engine_kwargs["max_overflow"] = 20
-            engine_kwargs["pool_recycle"] = 1800
-
-        _engine = create_engine(
-            url,
-            connect_args=connect_args,
-            **engine_kwargs,
-        )
-
-        # Enable WAL mode and foreign keys for SQLite.
-        if url.startswith("sqlite"):
-            @event.listens_for(_engine, "connect")
-            def _set_sqlite_pragma(dbapi_conn, _connection_record):
-                cursor = dbapi_conn.cursor()
-                cursor.execute("PRAGMA journal_mode=WAL;")
-                cursor.execute("PRAGMA foreign_keys=ON;")
-                cursor.close()
-
-    return _engine
-
-
-def get_session_factory() -> sessionmaker[Session]:
-    """Return the singleton session factory, creating the engine if needed."""
-    global _SessionLocal
-    if _SessionLocal is None:
-        _SessionLocal = sessionmaker(bind=_get_engine(), autocommit=False, autoflush=False)
-    return _SessionLocal
-
-
-def get_db():
-    """FastAPI dependency that yields a database session and ensures cleanup."""
-    factory = get_session_factory()
-    db = factory()
+def check_db_health() -> bool:
     try:
-        yield db
-    finally:
-        db.close()
-
-
-def create_tables() -> None:
-    """Create all tables defined via ``Base.metadata``."""
-    engine = _get_engine()
-    Base.metadata.create_all(bind=engine)
-
-
-def reset_engine() -> None:
-    """Dispose of the current engine — used by tests to swap DBs."""
-    global _engine, _SessionLocal
-    if _engine is not None:
-        _engine.dispose()
-    _engine = None
-    _SessionLocal = None
+        database = get_database()
+        database.command("ping")
+        return True
+    except Exception as e:
+        logger.warning("MongoDB ping failed: %s", e)
+        return False

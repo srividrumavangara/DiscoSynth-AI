@@ -1,183 +1,120 @@
-"""Dataset CRUD and record retrieval endpoints with user ownership enforcement."""
+from fastapi import APIRouter, HTTPException, Query, Response
+from typing import List, Optional
+from app.database import get_database
+from app.schemas.dataset import DatasetSummary, DatasetDetail, ValidationStatus
+from app.schemas.metadata_record import DocumentMetadataUpdate
+from app.services.export_service import ExportService
+from datetime import datetime, timezone
 
-from __future__ import annotations
+router = APIRouter(prefix="/datasets", tags=["Datasets"])
 
-import logging
-
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func
-from sqlalchemy.orm import Session
-
-from app.auth import AuthenticatedUser, get_current_user
-from app.database import get_db
-from app.models import Dataset, DocumentMetadata, GenerationHistory
-from app.schemas import (
-    DatasetListResponse,
-    DatasetResponse,
-    DocumentMetadataResponse,
-    GenerationHistoryResponse,
-    PaginatedResponse,
-)
-
-logger = logging.getLogger(__name__)
-router = APIRouter(tags=["datasets"])
-
-
-@router.get("/datasets", response_model=PaginatedResponse[DatasetListResponse])
+@router.get("", response_model=List[DatasetSummary])
 def list_datasets(
-    page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
-    db: Session = Depends(get_db),
-    current_user: AuthenticatedUser = Depends(get_current_user),
+    scenario: Optional[str] = Query(None, description="Filter by litigation scenario"),
+    limit: int = Query(50, ge=1, le=100)
 ):
-    """List datasets owned by the current authenticated user, most recent first."""
-    # Enforce strict user isolation: only fetch datasets belonging to current_user
-    query = db.query(Dataset).filter(Dataset.user_id == current_user.id)
-    total = query.with_entities(func.count(Dataset.id)).scalar() or 0
+    db = get_database()
+    query = {}
+    if scenario and scenario != "All":
+        query["scenario_type"] = scenario
 
-    datasets = (
-        query.order_by(Dataset.created_at.desc())
-        .offset((page - 1) * page_size)
-        .limit(page_size)
-        .all()
+    cursor = db.datasets.find(query, {
+        "dataset_id": 1,
+        "name": 1,
+        "scenario_type": 1,
+        "document_count": 1,
+        "created_at": 1,
+        "validation_status": 1
+    }).sort("created_at", -1).limit(limit)
+
+    results = []
+    for doc in cursor:
+        v_status = doc.get("validation_status", {})
+        results.append(DatasetSummary(
+            dataset_id=doc.get("dataset_id"),
+            name=doc.get("name", "Untitled Dataset"),
+            scenario_type=doc.get("scenario_type", "General"),
+            document_count=doc.get("document_count", 0),
+            created_at=str(doc.get("created_at")),
+            validation_status=ValidationStatus(**v_status) if v_status else ValidationStatus()
+        ))
+    return results
+
+@router.get("/{dataset_id}", response_model=DatasetDetail)
+def get_dataset(dataset_id: str):
+    db = get_database()
+    doc = db.datasets.find_one({"dataset_id": dataset_id})
+    if not doc:
+        raise HTTPException(status_code=404, detail=f"Dataset {dataset_id} not found.")
+    if "_id" in doc:
+        del doc["_id"]
+    return doc
+
+@router.patch("/{dataset_id}/records/{doc_id}")
+def update_dataset_record(dataset_id: str, doc_id: str, update_data: DocumentMetadataUpdate):
+    db = get_database()
+    ds = db.datasets.find_one({"dataset_id": dataset_id})
+    if not ds:
+        raise HTTPException(status_code=404, detail=f"Dataset {dataset_id} not found.")
+
+    records = ds.get("records", [])
+    found = False
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    update_fields = update_data.model_dump(exclude_unset=True)
+
+    for r in records:
+        if r.get("doc_id") == doc_id:
+            for k, v in update_fields.items():
+                r[k] = v
+            r["modified_date"] = now_iso
+            found = True
+            break
+
+    if not found:
+        raise HTTPException(status_code=404, detail=f"Record {doc_id} not found in dataset {dataset_id}.")
+
+    db.datasets.update_one(
+        {"dataset_id": dataset_id},
+        {"$set": {"records": records, "updated_at": now_iso}}
     )
 
-    return PaginatedResponse(
-        page=page,
-        page_size=page_size,
-        total=total,
-        items=[DatasetListResponse.model_validate(ds) for ds in datasets],
-    )
+    return {"status": "success", "message": f"Record {doc_id} updated successfully."}
 
+@router.delete("/{dataset_id}")
+def delete_dataset(dataset_id: str):
+    db = get_database()
+    res = db.datasets.delete_one({"dataset_id": dataset_id})
+    if res.deleted_count == 0:
+        raise HTTPException(status_code=404, detail=f"Dataset {dataset_id} not found.")
+    return {"status": "success", "message": f"Dataset {dataset_id} deleted successfully."}
 
-@router.get("/datasets/{dataset_id}", response_model=DatasetResponse)
-def get_dataset(
-    dataset_id: str,
-    db: Session = Depends(get_db),
-    current_user: AuthenticatedUser = Depends(get_current_user),
-):
-    """Get detailed information about a specific dataset, verifying user ownership."""
-    dataset = db.query(Dataset).filter(Dataset.id == dataset_id).first()
-    if not dataset:
-        raise HTTPException(status_code=404, detail="Dataset not found")
-
-    if dataset.user_id is not None and dataset.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Forbidden: You do not have permission to access this dataset",
+@router.get("/{dataset_id}/export/csv")
+def export_dataset_csv(dataset_id: str):
+    try:
+        csv_buffer = ExportService.export_to_csv(dataset_id)
+        filename = f"{dataset_id}_litigation_metadata.csv"
+        return Response(
+            content=csv_buffer.getvalue(),
+            media_type="text/csv",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
         )
+    except ValueError as ve:
+        raise HTTPException(status_code=404, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
 
-    return dataset
-
-
-@router.get(
-    "/datasets/{dataset_id}/records",
-    response_model=PaginatedResponse[DocumentMetadataResponse],
-)
-def get_dataset_records(
-    dataset_id: str,
-    page: int = Query(1, ge=1),
-    page_size: int = Query(25, ge=1, le=100),
-    document_type: str | None = Query(None),
-    responsive: str | None = Query(None),
-    privilege_status: str | None = Query(None),
-    search: str | None = Query(None),
-    db: Session = Depends(get_db),
-    current_user: AuthenticatedUser = Depends(get_current_user),
-):
-    """Retrieve paginated records for a dataset with optional filters, verifying user ownership."""
-    # Verify dataset exists and current_user owns it
-    dataset = db.query(Dataset).filter(Dataset.id == dataset_id).first()
-    if not dataset:
-        raise HTTPException(status_code=404, detail="Dataset not found")
-
-    if dataset.user_id is not None and dataset.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Forbidden: You do not have permission to access these records",
+@router.get("/{dataset_id}/export/json")
+def export_dataset_json(dataset_id: str):
+    try:
+        json_data = ExportService.export_to_json(dataset_id)
+        filename = f"{dataset_id}_litigation_metadata.json"
+        return Response(
+            content=json_data,
+            media_type="application/json",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
         )
-
-    query = db.query(DocumentMetadata).filter(
-        DocumentMetadata.dataset_id == dataset_id
-    )
-
-    # Apply filters
-    if document_type:
-        query = query.filter(DocumentMetadata.document_type == document_type)
-    if responsive is not None and responsive != "":
-        if responsive.lower() in ("true", "1"):
-            query = query.filter(DocumentMetadata.responsive == True)  # noqa: E712
-        elif responsive.lower() in ("false", "0"):
-            query = query.filter(DocumentMetadata.responsive == False)  # noqa: E712
-    if privilege_status:
-        query = query.filter(DocumentMetadata.privilege_status == privilege_status)
-    if search:
-        pattern = f"%{search}%"
-        query = query.filter(
-            (DocumentMetadata.document_id.ilike(pattern))
-            | (DocumentMetadata.fictional_custodian_name.ilike(pattern))
-            | (DocumentMetadata.fictional_organization.ilike(pattern))
-        )
-
-    total = query.count()
-    records = (
-        query.order_by(DocumentMetadata.id)
-        .offset((page - 1) * page_size)
-        .limit(page_size)
-        .all()
-    )
-
-    return PaginatedResponse(
-        page=page,
-        page_size=page_size,
-        total=total,
-        items=[DocumentMetadataResponse.model_validate(r) for r in records],
-    )
-
-
-@router.delete("/datasets/{dataset_id}", status_code=204)
-def delete_dataset(
-    dataset_id: str,
-    db: Session = Depends(get_db),
-    current_user: AuthenticatedUser = Depends(get_current_user),
-):
-    """Delete a dataset and all its records, verifying ownership before deletion."""
-    dataset = db.query(Dataset).filter(Dataset.id == dataset_id).first()
-    if not dataset:
-        raise HTTPException(status_code=404, detail="Dataset not found")
-
-    if dataset.user_id is not None and dataset.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Forbidden: You cannot delete a dataset you do not own",
-        )
-
-    db.delete(dataset)
-    db.commit()
-    return None
-
-
-@router.get("/history", response_model=PaginatedResponse[GenerationHistoryResponse])
-def list_generation_history(
-    page: int = Query(1, ge=1),
-    page_size: int = Query(50, ge=1, le=100),
-    db: Session = Depends(get_db),
-    current_user: AuthenticatedUser = Depends(get_current_user),
-):
-    """List generation audit logs for current authenticated user."""
-    query = db.query(GenerationHistory).filter(GenerationHistory.user_id == current_user.id)
-    total = query.with_entities(func.count(GenerationHistory.id)).scalar() or 0
-
-    items = (
-        query.order_by(GenerationHistory.created_at.desc())
-        .offset((page - 1) * page_size)
-        .limit(page_size)
-        .all()
-    )
-
-    return PaginatedResponse(
-        page=page,
-        page_size=page_size,
-        total=total,
-        items=[GenerationHistoryResponse.model_validate(h) for h in items],
-    )
+    except ValueError as ve:
+        raise HTTPException(status_code=404, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")

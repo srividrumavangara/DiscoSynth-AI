@@ -1,120 +1,46 @@
-"""Export service — CSV and JSON streaming exports for DiscoSynth AI."""
-
-from __future__ import annotations
-
 import io
 import json
-import logging
-from datetime import datetime, timezone
-from typing import Any
-
 import pandas as pd
-from fastapi.responses import StreamingResponse
-from sqlalchemy.orm import Session
+from typing import List, Dict, Any
+from app.database import get_database
 
-from app.models import Dataset, DocumentMetadata
+class ExportService:
+    @staticmethod
+    def get_dataset_records(dataset_id: str) -> List[Dict[str, Any]]:
+        db = get_database()
+        ds = db.datasets.find_one({"dataset_id": dataset_id})
+        if not ds:
+            raise ValueError(f"Dataset {dataset_id} not found.")
+        return ds.get("records", [])
 
-logger = logging.getLogger(__name__)
+    @classmethod
+    def export_to_csv(cls, dataset_id: str) -> io.StringIO:
+        records = cls.get_dataset_records(dataset_id)
+        if not records:
+            df = pd.DataFrame()
+        else:
+            # Flatten lists like recipients and issue_tags into semicolon-separated strings for CSV
+            formatted = []
+            for r in records:
+                row = dict(r)
+                if isinstance(row.get("recipients"), list):
+                    row["recipients"] = "; ".join(row["recipients"])
+                if isinstance(row.get("issue_tags"), list):
+                    row["issue_tags"] = "; ".join(row["issue_tags"])
+                formatted.append(row)
+            df = pd.DataFrame(formatted)
 
-# Columns to include in the export (order matters for CSV readability)
-_EXPORT_COLUMNS = [
-    "document_id", "case_id", "document_type", "custodian_id",
-    "custodian_role", "fictional_custodian_name", "fictional_organization",
-    "date_created", "date_modified", "file_type", "communication_channel",
-    "confidentiality_level", "privilege_status", "responsive", "issue_tags",
-    "legal_hold", "review_status", "redaction_required",
-    "document_family_id", "attachment_count", "file_size_kb",
-    "language", "jurisdiction",
-]
+        output = io.StringIO()
+        df.to_csv(output, index=False, encoding="utf-8")
+        output.seek(0)
+        return output
 
-
-def _records_to_dicts(records: list[DocumentMetadata]) -> list[dict[str, Any]]:
-    """Convert ORM records to plain dicts suitable for export."""
-    rows: list[dict[str, Any]] = []
-    for rec in records:
-        row: dict[str, Any] = {}
-        for col in _EXPORT_COLUMNS:
-            val = getattr(rec, col, None)
-            if isinstance(val, datetime):
-                val = val.isoformat()
-            elif isinstance(val, list):
-                val = "; ".join(str(v) for v in val)
-            row[col] = val
-        rows.append(row)
-    return rows
-
-
-def _build_manifest(dataset: Dataset, total_records: int) -> dict[str, Any]:
-    """Build a manifest dict with dataset metadata."""
-    return {
-        "dataset_id": dataset.id,
-        "dataset_name": dataset.name,
-        "scenario": dataset.scenario,
-        "complexity": dataset.complexity,
-        "generation_method": dataset.generation_method,
-        "total_records": total_records,
-        "quality_score": dataset.quality_score,
-        "seed": dataset.seed,
-        "created_at": dataset.created_at.isoformat() if dataset.created_at else None,
-        "exported_at": datetime.now(timezone.utc).isoformat(),
-        "disclaimer": "This dataset is entirely synthetic and fictional. It is intended for e-discovery testing only.",
-    }
-
-
-def export_csv(dataset: Dataset, records: list[DocumentMetadata]) -> StreamingResponse:
-    """Generate a streaming CSV response.
-
-    Parameters
-    ----------
-    dataset:
-        The parent ``Dataset`` ORM object.
-    records:
-        List of ``DocumentMetadata`` ORM objects to export.
-    """
-    rows = _records_to_dicts(records)
-    df = pd.DataFrame(rows, columns=_EXPORT_COLUMNS)
-
-    buf = io.StringIO()
-    # Write manifest as a comment header
-    manifest = _build_manifest(dataset, len(records))
-    buf.write(f"# DiscoSynth AI Export — {manifest['dataset_name']}\n")
-    buf.write(f"# Dataset ID: {manifest['dataset_id']}\n")
-    buf.write(f"# Scenario: {manifest['scenario']} | Records: {manifest['total_records']}\n")
-    buf.write(f"# Exported: {manifest['exported_at']}\n")
-    buf.write(f"# DISCLAIMER: {manifest['disclaimer']}\n")
-    df.to_csv(buf, index=False)
-    buf.seek(0)
-
-    filename = f"discosynth_{dataset.id[:8]}.csv"
-    return StreamingResponse(
-        iter([buf.getvalue()]),
-        media_type="text/csv",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
-    )
-
-
-def export_json(dataset: Dataset, records: list[DocumentMetadata]) -> StreamingResponse:
-    """Generate a streaming JSON response.
-
-    Parameters
-    ----------
-    dataset:
-        The parent ``Dataset`` ORM object.
-    records:
-        List of ``DocumentMetadata`` ORM objects to export.
-    """
-    rows = _records_to_dicts(records)
-    manifest = _build_manifest(dataset, len(records))
-
-    payload = {
-        "manifest": manifest,
-        "records": rows,
-    }
-
-    content = json.dumps(payload, indent=2, default=str)
-    filename = f"discosynth_{dataset.id[:8]}.json"
-    return StreamingResponse(
-        iter([content]),
-        media_type="application/json",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
-    )
+    @classmethod
+    def export_to_json(cls, dataset_id: str) -> str:
+        db = get_database()
+        ds = db.datasets.find_one({"dataset_id": dataset_id})
+        if not ds:
+            raise ValueError(f"Dataset {dataset_id} not found.")
+        if "_id" in ds:
+            ds["_id"] = str(ds["_id"])
+        return json.dumps(ds, indent=2, default=str)

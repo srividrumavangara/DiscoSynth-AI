@@ -1,125 +1,122 @@
-"""Analytics computation service for DiscoSynth AI.
+from typing import Dict, Any, List
+from collections import Counter
+from app.database import get_database
+from app.schemas.dataset import AnalyticsOverview, DatasetSummary, ValidationStatus
 
-Queries the database to build chart-ready analytics for a given dataset.
-"""
+class AnalyticsService:
+    @staticmethod
+    def get_overview_analytics() -> AnalyticsOverview:
+        db = get_database()
+        cursor = db.datasets.find({}, {
+            "dataset_id": 1,
+            "name": 1,
+            "scenario_type": 1,
+            "document_count": 1,
+            "created_at": 1,
+            "validation_status": 1,
+            "records.doc_type": 1,
+            "records.privilege_status": 1,
+            "records.responsiveness": 1,
+            "records.creation_date": 1
+        }).sort("created_at", -1)
 
-from __future__ import annotations
+        datasets_raw = list(cursor)
+        total_datasets = len(datasets_raw)
 
-import logging
-from collections import Counter, defaultdict
+        total_docs = 0
+        scenario_counts = Counter()
+        category_counts = Counter()
+        privilege_counts = Counter()
+        resp_counts = Counter()
 
-from sqlalchemy.orm import Session
+        recent_datasets: List[DatasetSummary] = []
 
-from app.models import DocumentMetadata
-from app.schemas import AnalyticsResponse, TimelinePoint
+        for ds in datasets_raw:
+            scenario = ds.get("scenario_type", "Unknown")
+            scenario_counts[scenario] += 1
+            doc_cnt = ds.get("document_count", 0)
+            total_docs += doc_cnt
 
-logger = logging.getLogger(__name__)
+            if len(recent_datasets) < 5:
+                v_status = ds.get("validation_status", {})
+                recent_datasets.append(DatasetSummary(
+                    dataset_id=ds.get("dataset_id"),
+                    name=ds.get("name"),
+                    scenario_type=scenario,
+                    document_count=doc_cnt,
+                    created_at=str(ds.get("created_at")),
+                    validation_status=ValidationStatus(**v_status) if v_status else ValidationStatus()
+                ))
 
-# Fields considered "required" for completeness calculation
-_ALL_FIELDS = [
-    "document_id", "case_id", "document_type", "custodian_id",
-    "custodian_role", "fictional_custodian_name", "fictional_organization",
-    "date_created", "date_modified", "file_type", "confidentiality_level",
-    "privilege_status", "review_status", "jurisdiction", "file_size_kb",
-    "language", "issue_tags",
-]
+            for rec in ds.get("records", []):
+                cat = rec.get("doc_type", "Other")
+                category_counts[cat] += 1
 
+                priv = rec.get("privilege_status", "Not Privileged")
+                privilege_counts[priv] += 1
 
-def compute_analytics(dataset_id: str, db: Session) -> AnalyticsResponse:
-    """Compute analytics from stored records for *dataset_id*.
+                resp = rec.get("responsiveness", "Responsive")
+                resp_counts[resp] += 1
 
-    Parameters
-    ----------
-    dataset_id:
-        UUID of the dataset.
-    db:
-        Active database session.
-    """
-    records = (
-        db.query(DocumentMetadata)
-        .filter(DocumentMetadata.dataset_id == dataset_id)
-        .all()
-    )
+        priv_count = sum(v for k, v in privilege_counts.items() if k != "Not Privileged")
+        non_priv_count = privilege_counts.get("Not Privileged", 0)
 
-    total = len(records)
-    if total == 0:
-        return AnalyticsResponse(
-            dataset_id=dataset_id,
-            total_records=0,
-            document_type_distribution={},
-            responsive_distribution={"responsive": 0, "non_responsive": 0},
-            privilege_distribution={},
-            confidentiality_distribution={},
-            timeline=[],
-            issue_tag_frequency={},
-            review_status_distribution={},
-            metadata_completeness=0.0,
+        responsive_count = resp_counts.get("Responsive", 0)
+        non_responsive_count = resp_counts.get("Non-Responsive", 0)
+
+        return AnalyticsOverview(
+            total_datasets=total_datasets,
+            total_documents=total_docs,
+            scenarios_count=len(scenario_counts),
+            privileged_count=priv_count,
+            non_privileged_count=non_priv_count,
+            responsive_count=responsive_count,
+            non_responsive_count=non_responsive_count,
+            scenario_distribution=[{"name": k, "value": v} for k, v in scenario_counts.most_common()],
+            category_distribution=[{"name": k, "value": v} for k, v in category_counts.most_common()],
+            privilege_distribution=[{"name": k, "value": v} for k, v in privilege_counts.items()],
+            responsiveness_distribution=[{"name": k, "value": v} for k, v in resp_counts.items()],
+            recent_datasets=recent_datasets
         )
 
-    # Document type distribution
-    doc_type_counter: Counter[str] = Counter()
-    for rec in records:
-        doc_type_counter[rec.document_type] += 1
+    @staticmethod
+    def get_dataset_analytics(dataset_id: str) -> Dict[str, Any]:
+        db = get_database()
+        ds = db.datasets.find_one({"dataset_id": dataset_id})
+        if not ds:
+            return {}
 
-    # Responsive distribution
-    resp_count = sum(1 for r in records if r.responsive)
-    responsive_dist = {
-        "responsive": resp_count,
-        "non_responsive": total - resp_count,
-    }
+        records = ds.get("records", [])
+        cat_counts = Counter()
+        custodian_counts = Counter()
+        priv_counts = Counter()
+        resp_counts = Counter()
+        conf_counts = Counter()
+        year_counts = Counter()
+        tag_counts = Counter()
 
-    # Privilege distribution
-    priv_counter: Counter[str] = Counter()
-    for rec in records:
-        priv_counter[rec.privilege_status] += 1
+        for r in records:
+            cat_counts[r.get("doc_type", "Other")] += 1
+            custodian_counts[r.get("custodian", "Unknown")] += 1
+            priv_counts[r.get("privilege_status", "Not Privileged")] += 1
+            resp_counts[r.get("responsiveness", "Responsive")] += 1
+            conf_counts[r.get("confidentiality_level", "Confidential")] += 1
 
-    # Confidentiality distribution
-    conf_counter: Counter[str] = Counter()
-    for rec in records:
-        conf_counter[rec.confidentiality_level] += 1
+            c_date = r.get("creation_date", "")
+            year = c_date[:4] if len(c_date) >= 4 else "Unknown"
+            year_counts[year] += 1
 
-    # Timeline — group by year-month
-    monthly: defaultdict[str, int] = defaultdict(int)
-    for rec in records:
-        if rec.date_created:
-            key = rec.date_created.strftime("%Y-%m")
-            monthly[key] += 1
-    timeline = [
-        TimelinePoint(date=k, count=v)
-        for k, v in sorted(monthly.items())
-    ]
+            for tag in r.get("issue_tags", []):
+                tag_counts[tag] += 1
 
-    # Issue tag frequency
-    tag_counter: Counter[str] = Counter()
-    for rec in records:
-        tags = rec.issue_tags if rec.issue_tags else []
-        for tag in tags:
-            tag_counter[tag] += 1
-
-    # Review status distribution
-    review_counter: Counter[str] = Counter()
-    for rec in records:
-        review_counter[rec.review_status] += 1
-
-    # Metadata completeness
-    total_fields = total * len(_ALL_FIELDS)
-    filled = 0
-    for rec in records:
-        for field in _ALL_FIELDS:
-            val = getattr(rec, field, None)
-            if val is not None and val != "" and val != []:
-                filled += 1
-    completeness = round(filled / total_fields, 4) if total_fields > 0 else 0.0
-
-    return AnalyticsResponse(
-        dataset_id=dataset_id,
-        total_records=total,
-        document_type_distribution=dict(doc_type_counter),
-        responsive_distribution=responsive_dist,
-        privilege_distribution=dict(priv_counter),
-        confidentiality_distribution=dict(conf_counter),
-        timeline=timeline,
-        issue_tag_frequency=dict(tag_counter.most_common()),
-        review_status_distribution=dict(review_counter),
-        metadata_completeness=completeness,
-    )
+        return {
+            "dataset_id": dataset_id,
+            "total_documents": len(records),
+            "category_distribution": [{"name": k, "count": v} for k, v in cat_counts.most_common()],
+            "custodian_distribution": [{"name": k, "count": v} for k, v in custodian_counts.most_common(8)],
+            "privilege_distribution": [{"name": k, "value": v} for k, v in priv_counts.items()],
+            "responsiveness_distribution": [{"name": k, "value": v} for k, v in resp_counts.items()],
+            "confidentiality_distribution": [{"name": k, "count": v} for k, v in conf_counts.items()],
+            "year_distribution": sorted([{"year": k, "count": v} for k, v in year_counts.items()], key=lambda x: x["year"]),
+            "top_tags": [{"tag": k, "count": v} for k, v in tag_counts.most_common(8)]
+        }

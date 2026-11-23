@@ -1,94 +1,132 @@
-export interface Dataset {
-  id: string;
+export interface DateRange {
+  start: string;
+  end: string;
+}
+
+export interface GenerationConfig {
+  scenario_type: string;
+  custom_scenario_details?: string;
+  size: number;
+  complexity: 'Low' | 'Medium' | 'High';
+  date_range: DateRange;
+  document_categories: string[];
+  custodian_count: number;
+  target_privilege_ratio: number;
+  target_responsiveness_ratio: number;
+  confidentiality_levels: string[];
+  additional_instructions?: string;
+}
+
+export interface NLScenarioResponse {
+  inferred_config: GenerationConfig;
+  suggested_name: string;
+  scenario_summary: string;
+  key_entities: string[];
+  inferred_issues: string[];
+}
+
+export interface DocumentMetadata {
+  doc_id: string;
+  filename: string;
+  title: string;
+  doc_type: string;
+  file_extension: string;
+  file_size_kb: number;
+  creation_date: string;
+  modified_date: string;
+  custodian: string;
+  sender?: string;
+  recipients: string[];
+  source_system: string;
+  confidentiality_level: string;
+  privilege_status: 'Not Privileged' | 'Attorney-Client' | 'Work Product' | 'Joint Defense';
+  privilege_basis?: string | null;
+  responsiveness: 'Responsive' | 'Non-Responsive';
+  issue_tags: string[];
+  litigation_scenario: string;
+  synthetic_marker: string;
+}
+
+export interface ValidationStatus {
+  is_valid: boolean;
+  checked_records: number;
+  error_count: number;
+  warnings: string[];
+}
+
+export interface ModelInfo {
+  provider: string;
+  model_name: string;
+  batches_generated: number;
+  total_duration_sec: number;
+}
+
+export interface DatasetSummary {
+  dataset_id: string;
   name: string;
-  scenario: string;
-  num_records: number;
-  complexity: string;
-  generation_method: string;
-  status: string;
-  quality_score: number | null;
-  seed: number | null;
-  config_json: Record<string, unknown>;
+  scenario_type: string;
+  document_count: number;
+  created_at: string;
+  validation_status: ValidationStatus;
+}
+
+export interface DatasetDetail {
+  dataset_id: string;
+  name: string;
+  scenario_type: string;
+  description?: string;
+  parameters: GenerationConfig;
+  document_count: number;
+  records: DocumentMetadata[];
+  validation_status: ValidationStatus;
+  model_info: ModelInfo;
   created_at: string;
   updated_at: string;
 }
 
-export interface DocumentMetadata {
-  id: number;
+export interface AnalyticsOverview {
+  total_datasets: number;
+  total_documents: number;
+  scenarios_count: number;
+  privileged_count: number;
+  non_privileged_count: number;
+  responsive_count: number;
+  non_responsive_count: number;
+  scenario_distribution: { name: string; value: number }[];
+  category_distribution: { name: string; value: number }[];
+  privilege_distribution: { name: string; value: number }[];
+  responsiveness_distribution: { name: string; value: number }[];
+  recent_datasets: DatasetSummary[];
+}
+
+export interface DatasetAnalytics {
   dataset_id: string;
-  document_id: string;
-  case_id: string;
-  document_type: string;
-  custodian_id: string;
-  custodian_role: string;
-  fictional_custodian_name: string;
-  fictional_organization: string;
-  date_created: string;
-  date_modified: string;
-  file_type: string;
-  communication_channel: string | null;
-  confidentiality_level: string;
-  privilege_status: string;
-  responsive: boolean;
-  issue_tags: string[];
-  legal_hold: boolean;
-  review_status: string;
-  redaction_required: boolean;
-  document_family_id: string | null;
-  attachment_count: number;
-  file_size_kb: number;
-  language: string;
-  jurisdiction: string;
-}
-
-export interface PaginatedResponse<T> {
-  items: T[];
-  total: number;
-  page: number;
-  page_size: number;
-  total_pages: number;
-}
-
-export interface AnalyticsData {
-  dataset_id?: string;
-  total_records?: number;
-  document_type_distribution: Record<string, number>;
-  responsive_distribution: Record<string, number>;
-  privilege_distribution: Record<string, number>;
-  confidentiality_distribution: Record<string, number>;
-  timeline: Array<{ date: string; count: number }>;
-  issue_tag_frequency: Record<string, number>;
-  review_status_distribution: Record<string, number>;
-  metadata_completeness: number;
-}
-
-export interface QualityReport {
-  overall_score: number;
-  schema_validity: number;
-  completeness: number;
-  uniqueness: number;
-  logical_consistency: number;
-  distribution_adherence: number;
-  details: Record<string, unknown>;
-}
-
-export interface GenerationRequest {
-  name: string;
-  scenario: string;
-  num_records: number;
-  complexity: string;
-  document_types: string[];
-  classification_distribution: string;
-  custom_responsive_pct?: number;
-  custom_privileged_pct?: number;
-  seed?: number | null;
-  generation_method: string;
+  total_documents: number;
+  category_distribution: { name: string; count: number }[];
+  custodian_distribution: { name: string; count: number }[];
+  privilege_distribution: { name: string; value: number }[];
+  responsiveness_distribution: { name: string; value: number }[];
+  confidentiality_distribution: { name: string; count: number }[];
+  year_distribution: { year: string; count: number }[];
+  top_tags: { tag: string; count: number }[];
 }
 
 export interface HealthStatus {
   status: string;
-  database: string;
-  llm_provider: string;
-  llm_status: string;
-  version: string;
+  environment: string;
+  database: {
+    status: string;
+    name: string;
+    type?: string;
+    total_datasets?: number;
+    total_documents?: number;
+    last_generation?: string;
+  };
+  generative_ai: {
+    provider: string;
+    model: string;
+    configured: boolean;
+    status?: string;
+    note: string;
+  };
 }

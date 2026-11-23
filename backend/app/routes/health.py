@@ -1,46 +1,53 @@
-"""Health check endpoint."""
+from fastapi import APIRouter
+from app.database import check_db_health, get_database
+from app.services.gemini_service import gemini_service
+from app.config import settings
 
-from __future__ import annotations
+router = APIRouter(prefix="/health", tags=["Health"])
 
-import logging
+@router.get("")
+def health_check():
+    db_ok = check_db_health()
+    llm_configured = gemini_service.is_configured()
 
-from fastapi import APIRouter, Depends
-from sqlalchemy import text
-from sqlalchemy.orm import Session
+    total_datasets = 0
+    total_docs = 0
+    last_generation = None
+    db_type = "MongoDB Atlas" if "mongodb+srv" in settings.MONGODB_URI else "Local MongoDB"
 
-from app.config import get_settings
-from app.database import get_db
-from app.schemas import HealthResponse
-from app.services.llm_service import get_llm_provider
+    if db_ok:
+        try:
+            db = get_database()
+            total_datasets = db.datasets.count_documents({})
+            recent = db.datasets.find().sort("created_at", -1).limit(1)
+            for r in recent:
+                last_generation = r.get("created_at")
+            
+            # Aggregated docs count
+            pipeline = [{"$group": {"_id": None, "total": {"$sum": "$document_count"}}}]
+            agg = list(db.datasets.aggregate(pipeline))
+            if agg:
+                total_docs = agg[0].get("total", 0)
+        except Exception:
+            pass
 
-logger = logging.getLogger(__name__)
-router = APIRouter(tags=["health"])
-
-
-@router.get("/health", response_model=HealthResponse)
-def health_check(db: Session = Depends(get_db)):
-    """Return application health status including database and LLM provider."""
-    settings = get_settings()
-
-    # Database check
-    db_status = "disconnected"
-    try:
-        db.execute(text("SELECT 1"))
-        db_status = "connected"
-    except Exception as exc:
-        logger.warning("Database health check failed: %s", exc)
-
-    # LLM check
-    provider = get_llm_provider()
-    llm_provider_name = settings.LLM_PROVIDER
-    try:
-        llm_status = provider.health_check()
-    except Exception:
-        llm_status = "unavailable"
-
-    return HealthResponse(
-        status="healthy" if db_status == "connected" else "degraded",
-        database=db_status,
-        llm_provider=f"{llm_provider_name} ({llm_status})",
-        app_name=settings.APP_NAME,
-    )
+    status = "healthy" if db_ok and llm_configured else "degraded"
+    return {
+        "status": status,
+        "environment": settings.ENVIRONMENT,
+        "database": {
+            "status": "connected" if db_ok else "unreachable",
+            "name": settings.DATABASE_NAME,
+            "type": db_type,
+            "total_datasets": total_datasets,
+            "total_documents": total_docs,
+            "last_generation": last_generation
+        },
+        "generative_ai": {
+            "provider": "Google Gemini",
+            "model": gemini_service.active_model,
+            "configured": llm_configured,
+            "status": "connected" if llm_configured else "disconnected",
+            "note": f"Ready with {gemini_service.active_model}" if llm_configured else "GEMINI_API_KEY missing in backend/.env"
+        }
+    }

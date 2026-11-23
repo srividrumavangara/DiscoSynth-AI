@@ -1,52 +1,37 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-*.egg-info/
-dist/
-build/
-*.egg
-.eggs/
-*.whl
-venv/
-.venv/
-env/
+# Environment and secrets (CRITICAL: Never commit API keys or credentials)
 .env
-*.db
-*.sqlite3
-
-# Node
-node_modules/
-frontend/dist/
-frontend/.vite/
-*.tsbuildinfo
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-.DS_Store
-
-# Docker
-docker-compose.override.yml
-
-# Environment
-.env
-.env.local
-.env.production
+.env.*
 !.env.example
+backend/.env
+backend/.env.*
 !backend/.env.example
 
-# Testing
+# Python
+venv/
+.venv/
+backend/venv/
+backend/.pytest_cache/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
 .pytest_cache/
-.coverage
 htmlcov/
-.mypy_cache/
+.coverage
 
-# Generated
-*.csv
+# Node & Frontend
+node_modules/
+frontend/node_modules/
+frontend/dist/
+dist/
+.eslintcache
+frontend/.tmp/
+
+# MongoDB Local Data & Logs
+mongodb_data/
 *.log
-/exports/
+mongod.log
+
+# Operating System Files
+.DS_Store
+Thumbs.db
