@@ -18,7 +18,8 @@ import {
 import { apiClient } from './api/client';
 
 export const App: React.FC = () => {
-  const [currentTab, setCurrentTab] = useState<string>('landing');
+  const queryTab = new URLSearchParams(window.location.search).get('tab');
+  const [currentTab, setCurrentTab] = useState<string>(queryTab || 'landing');
   const [health, setHealth] = useState<HealthStatus | null>(null);
   const [overview, setOverview] = useState<AnalyticsOverview | null>(null);
   const [datasets, setDatasets] = useState<DatasetSummary[]>([]);
