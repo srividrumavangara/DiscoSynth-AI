@@ -130,3 +130,33 @@ export interface HealthStatus {
     note: string;
   };
 }
+
+export interface UserProfile {
+  user_id: string;
+  email: string;
+  full_name: string;
+  created_at: string;
+}
+
+export interface TokenResponse {
+  access_token: string;
+  token_type: string;
+  user: UserProfile;
+}
+
+export interface UserRegisterRequest {
+  full_name: string;
+  email: string;
+  password: string;
+}
+
+export interface UserLoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface UpdateProfileRequest {
+  full_name?: string;
+  password?: string;
+}
+

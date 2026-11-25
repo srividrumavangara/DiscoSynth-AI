@@ -23,6 +23,7 @@ class DatasetSummary(BaseModel):
     document_count: int
     created_at: str
     validation_status: ValidationStatus
+    user_id: Optional[str] = None
 
 class DatasetDetail(BaseModel):
     dataset_id: str
@@ -36,6 +37,7 @@ class DatasetDetail(BaseModel):
     model_info: ModelInfo
     created_at: str
     updated_at: str
+    user_id: Optional[str] = None
 
 class AnalyticsOverview(BaseModel):
     total_datasets: int

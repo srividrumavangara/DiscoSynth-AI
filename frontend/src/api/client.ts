@@ -7,7 +7,12 @@ import {
   AnalyticsOverview,
   DatasetAnalytics,
   HealthStatus,
-  DocumentMetadata
+  DocumentMetadata,
+  UserProfile,
+  TokenResponse,
+  UserRegisterRequest,
+  UserLoginRequest,
+  UpdateProfileRequest
 } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
@@ -20,7 +25,42 @@ const api = axios.create({
   timeout: 120000, // 2 minutes for LLM generation
 });
 
+// Attach JWT token to requests if available
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('discosynth_token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 export const apiClient = {
+  // Authentication
+  register: async (data: UserRegisterRequest): Promise<TokenResponse> => {
+    const res = await api.post<TokenResponse>('/auth/register', data);
+    return res.data;
+  },
+
+  login: async (data: UserLoginRequest): Promise<TokenResponse> => {
+    const res = await api.post<TokenResponse>('/auth/login', data);
+    return res.data;
+  },
+
+  getCurrentUser: async (): Promise<UserProfile> => {
+    const res = await api.get<UserProfile>('/auth/me');
+    return res.data;
+  },
+
+  forgotPassword: async (email: string): Promise<{ message: string }> => {
+    const res = await api.post<{ message: string }>('/auth/forgot-password', { email });
+    return res.data;
+  },
+
+  updateProfile: async (data: UpdateProfileRequest): Promise<UserProfile> => {
+    const res = await api.put<UserProfile>('/auth/profile', data);
+    return res.data;
+  },
+
   // Health
   getHealth: async (): Promise<HealthStatus> => {
     const res = await api.get<HealthStatus>('/health');

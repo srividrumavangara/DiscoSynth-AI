@@ -119,7 +119,7 @@ class GenerationService:
         }
 
     @classmethod
-    def generate_dataset(cls, config: GenerationConfig) -> DatasetDetail:
+    def generate_dataset(cls, config: GenerationConfig, user_id: Optional[str] = None) -> DatasetDetail:
         start_time = time.time()
         start_iso = datetime.now(timezone.utc).isoformat()
         random_suffix = uuid.uuid4().hex[:5].upper()
@@ -229,7 +229,8 @@ class GenerationService:
             validation_status=validation_status,
             model_info=model_info,
             created_at=now_iso,
-            updated_at=now_iso
+            updated_at=now_iso,
+            user_id=user_id
         )
 
         # Persist into MongoDB (datasets and generation_jobs collections)
@@ -242,6 +243,7 @@ class GenerationService:
             job_record = {
                 "job_id": f"JOB-{uuid.uuid4().hex[:8].upper()}",
                 "dataset_id": dataset_id,
+                "user_id": user_id,
                 "generation_status": "completed" if len(all_valid_records) > 0 else "failed",
                 "requested_document_count": total_requested,
                 "completed_document_count": len(all_valid_records),

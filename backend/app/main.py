@@ -2,7 +2,7 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
-from app.routes import health, scenario, generation, datasets, analytics, export
+from app.routes import health, scenario, generation, datasets, analytics, export, auth
 
 # Logging configuration
 logging.basicConfig(
@@ -27,6 +27,7 @@ app.add_middleware(
 )
 
 # Include API Routers
+app.include_router(auth.router, prefix="/api")
 app.include_router(health.router, prefix="/api")
 app.include_router(scenario.router, prefix="/api")
 app.include_router(generation.router, prefix="/api")

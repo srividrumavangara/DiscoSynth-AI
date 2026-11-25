@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { Navbar } from './components/layout/Navbar';
 import { Sidebar } from './components/layout/Sidebar';
 import { LandingPage } from './components/landing/LandingPage';
@@ -7,6 +8,9 @@ import { GeneratorPage } from './components/generator/GeneratorPage';
 import { DatasetPreviewPage } from './components/preview/DatasetPreviewPage';
 import { AnalyticsPage } from './components/analytics/AnalyticsPage';
 import { HistoryPage } from './components/history/HistoryPage';
+import { LoginPage } from './components/auth/LoginPage';
+import { RegisterPage } from './components/auth/RegisterPage';
+import { AccountPage } from './components/account/AccountPage';
 import { LoadingSpinner } from './components/common/LoadingSpinner';
 
 import {
@@ -17,7 +21,8 @@ import {
 } from './types';
 import { apiClient } from './api/client';
 
-export const App: React.FC = () => {
+const AppContent: React.FC = () => {
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const queryTab = new URLSearchParams(window.location.search).get('tab');
   const [currentTab, setCurrentTab] = useState<string>(queryTab || 'landing');
   const [health, setHealth] = useState<HealthStatus | null>(null);
@@ -27,7 +32,7 @@ export const App: React.FC = () => {
   const [selectedDataset, setSelectedDataset] = useState<DatasetDetail | null>(null);
   const [loadingDataset, setLoadingDataset] = useState<boolean>(false);
 
-  // Poll health and load overview on mount
+  // Poll health and load overview on mount and when auth state changes
   const refreshAppData = async () => {
     try {
       const [h, ov, dsList] = await Promise.all([
@@ -50,7 +55,7 @@ export const App: React.FC = () => {
 
   useEffect(() => {
     refreshAppData();
-  }, []);
+  }, [isAuthenticated]);
 
   const loadDataset = async (id: string, switchTabToPreview: boolean = false) => {
     setLoadingDataset(true);
@@ -75,23 +80,46 @@ export const App: React.FC = () => {
     refreshAppData();
   };
 
+  const handleNavigateTab = (tab: string) => {
+    if (tab === 'account' && !isAuthenticated) {
+      setCurrentTab('login');
+      return;
+    }
+    setCurrentTab(tab);
+  };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-[#070A0F] flex items-center justify-center">
+        <LoadingSpinner message="Initializing DiscoSynth AI cryptographic session..." />
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
+    <div className="min-h-screen bg-[#070A0F] text-slate-100 flex flex-col font-sans selection:bg-indigo-500/30 selection:text-indigo-200">
       <Navbar
         health={health}
         onOpenGenerator={() => setCurrentTab('generator')}
+        onNavigateTab={handleNavigateTab}
       />
 
       <div className="flex-1 flex overflow-hidden">
-        <Sidebar
-          currentTab={currentTab}
-          setCurrentTab={setCurrentTab}
-          selectedDatasetId={selectedDatasetId}
-        />
+        {/* Only show sidebar if not in standalone login or register page */}
+        {currentTab !== 'login' && currentTab !== 'register' && (
+          <Sidebar
+            currentTab={currentTab}
+            setCurrentTab={handleNavigateTab}
+            selectedDatasetId={selectedDatasetId}
+          />
+        )}
 
-        <main className="flex-1 overflow-y-auto p-6 md:p-8">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
           {currentTab === 'landing' && (
-            <LandingPage onStart={() => setCurrentTab('generator')} />
+            <LandingPage
+              onStart={() => setCurrentTab('generator')}
+              onExploreHistory={() => setCurrentTab('history')}
+            />
           )}
 
           {currentTab === 'dashboard' && (
@@ -119,18 +147,38 @@ export const App: React.FC = () => {
                   onViewAnalytics={() => setCurrentTab('analytics')}
                 />
               ) : (
-                <div className="py-16 text-center text-slate-500 text-sm">
-                  Please generate or select a dataset from the Dashboard or History.
+                <div className="py-20 text-center text-slate-500 text-sm max-w-md mx-auto">
+                  <p className="font-semibold text-slate-400">No Dataset Currently Loaded</p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Select a dataset from the Repository or Dashboard, or generate a new batch to preview records.
+                  </p>
+                  <button
+                    onClick={() => setCurrentTab('generator')}
+                    className="mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-medium"
+                  >
+                    Open Synthetic Generator
+                  </button>
                 </div>
               )}
             </>
           )}
 
-          {currentTab === 'analytics' && selectedDatasetId && (
-            <AnalyticsPage
-              datasetId={selectedDatasetId}
-              onBackToPreview={() => setCurrentTab('preview')}
-            />
+          {currentTab === 'analytics' && (
+            <>
+              {selectedDatasetId ? (
+                <AnalyticsPage
+                  datasetId={selectedDatasetId}
+                  onBackToPreview={() => setCurrentTab('preview')}
+                />
+              ) : (
+                <div className="py-20 text-center text-slate-500 text-sm max-w-md mx-auto">
+                  <p className="font-semibold text-slate-400">No Active Dataset for Analytics</p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Please select a dataset to view its privilege, responsiveness, and custodian distributions.
+                  </p>
+                </div>
+              )}
+            </>
           )}
 
           {currentTab === 'history' && (
@@ -140,9 +188,36 @@ export const App: React.FC = () => {
               onRefresh={refreshAppData}
             />
           )}
+
+          {currentTab === 'account' && (
+            <AccountPage />
+          )}
+
+          {currentTab === 'login' && (
+            <LoginPage
+              onSuccess={() => setCurrentTab('dashboard')}
+              onSwitchToRegister={() => setCurrentTab('register')}
+            />
+          )}
+
+          {currentTab === 'register' && (
+            <RegisterPage
+              onSuccess={() => setCurrentTab('dashboard')}
+              onSwitchToLogin={() => setCurrentTab('login')}
+            />
+          )}
         </main>
       </div>
     </div>
   );
 };
+
+export const App: React.FC = () => {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  );
+};
+
 export default App;

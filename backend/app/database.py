@@ -18,10 +18,16 @@ def get_database() -> Database:
             db.datasets.create_index("dataset_id", unique=True)
             db.datasets.create_index("created_at")
             db.datasets.create_index("scenario_type")
+            db.datasets.create_index("user_id")
             # Ensure indexes on generation_jobs collection
             db.generation_jobs.create_index("job_id", unique=True)
             db.generation_jobs.create_index("dataset_id")
             db.generation_jobs.create_index("started_at")
+            db.generation_jobs.create_index("user_id")
+            # Ensure indexes on users collection
+            db.users.create_index("user_id", unique=True)
+            db.users.create_index("email", unique=True)
+            db.users.create_index("created_at")
             logger.info("Connected to MongoDB: %s", settings.DATABASE_NAME)
         except Exception as e:
             logger.error("Failed to connect to MongoDB: %s", e)

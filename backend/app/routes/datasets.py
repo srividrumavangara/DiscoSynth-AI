@@ -1,9 +1,11 @@
-from fastapi import APIRouter, HTTPException, Query, Response
+from fastapi import APIRouter, HTTPException, Query, Response, Depends
 from typing import List, Optional
 from app.database import get_database
 from app.schemas.dataset import DatasetSummary, DatasetDetail, ValidationStatus
 from app.schemas.metadata_record import DocumentMetadataUpdate
+from app.schemas.user import UserProfile
 from app.services.export_service import ExportService
+from app.auth import get_optional_user
 from datetime import datetime, timezone
 
 router = APIRouter(prefix="/datasets", tags=["Datasets"])
@@ -11,12 +13,20 @@ router = APIRouter(prefix="/datasets", tags=["Datasets"])
 @router.get("", response_model=List[DatasetSummary])
 def list_datasets(
     scenario: Optional[str] = Query(None, description="Filter by litigation scenario"),
-    limit: int = Query(50, ge=1, le=100)
+    limit: int = Query(50, ge=1, le=100),
+    current_user: Optional[UserProfile] = Depends(get_optional_user)
 ):
     db = get_database()
     query = {}
     if scenario and scenario != "All":
         query["scenario_type"] = scenario
+
+    if current_user:
+        query["$or"] = [
+            {"user_id": current_user.user_id},
+            {"user_id": None},
+            {"user_id": {"$exists": False}}
+        ]
 
     cursor = db.datasets.find(query, {
         "dataset_id": 1,
@@ -24,7 +34,8 @@ def list_datasets(
         "scenario_type": 1,
         "document_count": 1,
         "created_at": 1,
-        "validation_status": 1
+        "validation_status": 1,
+        "user_id": 1
     }).sort("created_at", -1).limit(limit)
 
     results = []
@@ -36,7 +47,8 @@ def list_datasets(
             scenario_type=doc.get("scenario_type", "General"),
             document_count=doc.get("document_count", 0),
             created_at=str(doc.get("created_at")),
-            validation_status=ValidationStatus(**v_status) if v_status else ValidationStatus()
+            validation_status=ValidationStatus(**v_status) if v_status else ValidationStatus(),
+            user_id=doc.get("user_id")
         ))
     return results
 
