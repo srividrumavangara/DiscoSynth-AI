@@ -149,21 +149,6 @@ npm run build
 Builds and verifies the full TypeScript bundle with zero compiler errors.
 
 ---
-
-## 7. Viva & Project Defense Guide (University Evaluation)
-
-### Q1: Why generate synthetic metadata rather than full document texts?
-**Answer:** In e-discovery classification research, machine learning models (TAR and metadata classifiers) primarily evaluate custodian communication graphs, timeline bursts, file formats, and privilege logs. Generating metadata keeps generation fast, prevents token limits, and directly reflects real litigation databases (e.g., Relativity, Concordance).
-
-### Q2: How does the application prevent hallucinations and invalid records?
-**Answer:** We enforce structured JSON output at the LLM level and pass all output through a Pydantic validation engine (`ValidationService`). The engine verifies date intervals, category whitelists, and logical relationships (e.g., requiring a legal privilege basis if `privilege_status` is not `Not Privileged`). If malformed records occur, an automated correction prompt requests targeted repairs from Gemini.
-
-### Q3: How do you handle large dataset generation without truncation?
-**Answer:** We implement controlled batch generation (`GenerationService`). Large requests (e.g., 50 or 100 documents) are divided into batches of up to 25 records. Fictional case context (custodian names, corporate entities, date boundaries) is preserved across batches, while sequential Bates numbering is maintained continuously.
-
-### Q4: How is data persisted and visualized?
-**Answer:** Validated datasets are stored in MongoDB in the `datasets` collection with indexing on `dataset_id` and `created_at`. The frontend queries backend aggregation endpoints (`AnalyticsService`) to render interactive Recharts visualizations (pie charts, vertical bar charts, and timeline area charts).
-
 ---
 
 ## 8. License & Academic Disclaimer
